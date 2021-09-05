@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  web:
+    image: "django_easy_report:latest"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PY_VERSION=3.7
+        - DJANGO_VERSION=3.1.1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ".:/code/"
+    user: "1000:1000"

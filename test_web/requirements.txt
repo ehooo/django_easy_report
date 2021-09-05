@@ -1,0 +1,8 @@
+django-extensions
+virtualenv
+coverage
+Werkzeug
+ipdb
+
+django-storages
+django-celery-results
