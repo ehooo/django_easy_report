@@ -43,10 +43,10 @@ class ReportGeneratorAdmin(admin.ModelAdmin):
 class ReportQueryAdmin(admin.ModelAdmin):
     list_display = ('status', 'report')
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # pragma: no cover
         return False
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request, obj=None):  # pragma: no cover
         return False
 
 
@@ -54,8 +54,8 @@ class ReportQueryAdmin(admin.ModelAdmin):
 class ReportRequesterAdmin(admin.ModelAdmin):
     list_display = ('user', 'query')
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # pragma: no cover
         return False
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request, obj=None):  # pragma: no cover
         return False

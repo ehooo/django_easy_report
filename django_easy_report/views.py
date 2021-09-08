@@ -17,7 +17,7 @@ class BaseReportingView(View):
     def check_permissions(self):
         permissions = []
         if self.report and self.report.permissions:
-            permissions = self.report.get_permissions_list()
+            permissions = self.report.get_permissions()
         if not self.request.user.has_perms(permissions):
             raise PermissionDenied()
 

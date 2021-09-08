@@ -6,6 +6,8 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /code
 
+RUN apk update && apk add bash
+
 ADD requirements.txt .
 RUN echo "pip install django==${DJANGO_VERSION}" && \
     pip install -r requirements.txt
