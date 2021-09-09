@@ -3,6 +3,7 @@ virtualenv
 coverage
 Werkzeug
 ipdb
+flake8
 
 django-storages
 django-celery-results

@@ -10,15 +10,18 @@ RUN apk update && apk add bash
 
 ADD requirements.txt .
 RUN echo "pip install django==${DJANGO_VERSION}" && \
-    pip install -r requirements.txt
-ADD ./test_web/requirements.txt ./test_web/requirements.txt
-RUN pip install -r ./test_web/requirements.txt
+    pip install -r requirements.txt && rm requirements.txt
+ADD ./test_web/requirements.txt .
+RUN pip install -r requirements.txt && rm requirements.txt
+
+ADD README.md .
+ADD ./django_easy_report ./django_easy_report
+ADD ./setup.py .
+RUN python setup.py install && rm -fr django_easy_report setup.py README.md
 
 ADD ./entrypoint.sh .
-ADD README.md /code/
-ADD *.py /code/
-ADD ./django_easy_report/ /code/django_easy_report/
-ADD ./test_web/ /code/test_web/
-RUN python setup.py install && chmod 755 entrypoint.sh
+ADD ./manage.py .
+ADD ./test_web ./test_web
+RUN chmod 755 entrypoint.sh
 
 CMD "/code/entrypoint.sh"
