@@ -3,7 +3,9 @@ import os
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import JsonResponse, HttpResponse, Http404
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 
 from django_easy_report.models import ReportGenerator, ReportQuery, ReportRequester
 from django_easy_report.tasks import generate_report, notify_report_done
@@ -22,6 +24,7 @@ class BaseReportingView(View):
             raise PermissionDenied()
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class GenerateReport(BaseReportingView):
 
     def validate(self):
@@ -54,21 +57,26 @@ class GenerateReport(BaseReportingView):
         try:
             self.report = ReportGenerator.objects.get(name=report_name)
         except ReportGenerator.DoesNotExist:
-            return JsonResponse({'error': 'report not found'}, 404)
+            return JsonResponse({'error': 'report not found'}, status=404)
 
         try:
             self.check_permissions()
         except PermissionDenied:
-            return JsonResponse({'error': 'forbidden'}, 403)
+            return JsonResponse({'error': 'forbidden'}, status=403)
 
         try:
             user_params, report_params = self.validate()
         except ValidationError as ex:
             if ex.error_dict:
-                return JsonResponse(ex.error_dict, 400)
+                return JsonResponse(ex.error_dict, status=400)
             if ex.error_list:
-                return JsonResponse({'errors': ex.error_list}, 400)
-            return JsonResponse({'error': ex.message}, 400)
+                return JsonResponse({'errors': ex.error_list}, status=400)
+            return JsonResponse({'error': ex.message}, status=400)
+        user_params.update({
+            'domain': request.get_host(),
+            'port': request.get_port(),
+            'protocol': 'https' if request.is_secure() else 'http',
+        })
 
         params_hash = ReportQuery.gen_hash(report_params)
         if not self.is_force_generate():
@@ -79,10 +87,13 @@ class GenerateReport(BaseReportingView):
                     'created_at': previous.created_at,
                     'updated_at': previous.updated_at,
                     'status ': previous.status,
-                }, 200)
+                }, status=200)
 
         query_pk = request.GET.get('notify')
         if query_pk:
+            if not self.report.sender.storage_class_name:
+                return JsonResponse({'error': 'sender cannot storage files'}, status=400)
+
             if ReportQuery.objects.filter(params_hash=params_hash, pk=query_pk).exists():
                 ReportRequester.objects.create(
                     query_id=query_pk,
@@ -92,9 +103,9 @@ class GenerateReport(BaseReportingView):
                 notify_report_done.delay(query_pk)
                 return JsonResponse({
                     'accepted': query_pk,
-                }, 202)
+                }, status=202)
             else:
-                return JsonResponse({'error': 'query not found'}, 404)
+                return JsonResponse({'error': 'query not found'}, status=404)
 
         query = ReportQuery.objects.create(
             params_hash=params_hash,
@@ -109,7 +120,7 @@ class GenerateReport(BaseReportingView):
         generate_report.delay(report.pk)
         return JsonResponse({
             'created': query.pk,
-        }, 201)
+        }, status=201)
 
 
 class DownloadReport(BaseReportingView):

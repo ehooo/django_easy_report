@@ -266,10 +266,8 @@ class ReportQuery(models.Model):
     def gen_hash(data_dict):
         sha = hashlib.sha1()
         if data_dict:
-            if (
-                hasattr(data_dict, 'keys') and hasattr(data_dict, 'get') and
-                callable(data_dict.keys) and callable(data_dict.get)
-            ):
+            has_functions = hasattr(data_dict, 'keys') and hasattr(data_dict, 'get')
+            if has_functions and callable(data_dict.keys) and callable(data_dict.get):
                 for key in sorted(data_dict.keys()):
                     sha.update(key.encode())
                     value = data_dict.get(key)

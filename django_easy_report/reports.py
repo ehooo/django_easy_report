@@ -1,3 +1,5 @@
+from django.forms.utils import ErrorDict
+
 from django_easy_report.utils import import_class
 
 
@@ -17,7 +19,7 @@ class ReportBaseGenerator(object):
         self.report_model = None
         self.form = None
 
-    def reset(self):
+    def reset(self):  # pragma: no cover
         self.setup_params = {}
         self.report_model = None
         self.form = None
@@ -33,11 +35,10 @@ class ReportBaseGenerator(object):
 
     def validate(self, data):
         form = self.get_form(data)
-        if form:
-            form.validate()
+        if form and not form.is_valid():
             return form.errors
 
-    def get_params(self, data):
+    def get_params(self, data):  # pragma: no cover
         """
         :param data:
         :type data: dict
@@ -45,7 +46,7 @@ class ReportBaseGenerator(object):
         """
         return {}, data
 
-    def generate(self):
+    def generate(self):  # pragma: no cover
         raise NotImplementedError()
 
 
@@ -62,15 +63,28 @@ class ReportModelGenerator(ReportBaseGenerator):
         # Check fields are valid
         self.model_cls.objects.only(*fields).last()
         self.fields = fields
+        self.form_class = None
         if form_class_name:
             self.form_class = import_class(form_class_name)
         self.user_fields = user_fields
+
+    def validate(self, data):
+        errors = super(ReportModelGenerator, self).validate(data)
+        if self.form:
+            if not errors:
+                errors = ErrorDict()
+            # TODO check form fields and user_fields
+            # If there is fields not in form nor in user_fields raise validate error
+            pass
+        return errors
 
     def get_params(self, data):
         user_params, report_params = {}, {}
         for key, value in data.items():
             if key in self.user_fields:
                 user_params[key] = value
+            elif self.form_class:
+                pass  # TODO check fields from form class
             else:
                 report_params[key] = value
         return user_params, report_params

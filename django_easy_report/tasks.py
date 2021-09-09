@@ -9,4 +9,3 @@ def generate_report(report_pk):
 @shared_task
 def notify_report_done(query_pk):
     return
-
