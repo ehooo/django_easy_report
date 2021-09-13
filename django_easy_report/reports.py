@@ -1,3 +1,6 @@
+from gettext import gettext as _
+
+from django.core.exceptions import ValidationError
 from django.forms.utils import ErrorDict
 
 from django_easy_report.utils import import_class
@@ -73,9 +76,9 @@ class ReportModelGenerator(ReportBaseGenerator):
         if self.form:
             if not errors:
                 errors = ErrorDict()
-            # TODO check form fields and user_fields
-            # If there is fields not in form nor in user_fields raise validate error
-            pass
+            for key, value in data.items():
+                if not (key in self.user_fields or key in self.form.fields):
+                    errors[key] = ValidationError(_('Invalid field {}').format(key))
         return errors
 
     def get_params(self, data):
@@ -83,8 +86,6 @@ class ReportModelGenerator(ReportBaseGenerator):
         for key, value in data.items():
             if key in self.user_fields:
                 user_params[key] = value
-            elif self.form_class:
-                pass  # TODO check fields from form class
             else:
                 report_params[key] = value
         return user_params, report_params

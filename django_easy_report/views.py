@@ -8,6 +8,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from django_easy_report.models import ReportGenerator, ReportQuery, ReportRequester
+from django_easy_report.serializers import DjangoEasyReportJSONEncoder
 from django_easy_report.tasks import generate_report, notify_report_done
 
 
@@ -68,10 +69,11 @@ class GenerateReport(BaseReportingView):
             user_params, report_params = self.validate()
         except ValidationError as ex:
             if ex.error_dict:
-                return JsonResponse(ex.error_dict, status=400)
+                return JsonResponse({'error': ex.error_dict}, encoder=DjangoEasyReportJSONEncoder, status=400)
             if ex.error_list:
-                return JsonResponse({'errors': ex.error_list}, status=400)
-            return JsonResponse({'error': ex.message}, status=400)
+                return JsonResponse({'error': {'__all__': ex.error_list}},
+                                    encoder=DjangoEasyReportJSONEncoder, status=400)
+            return JsonResponse({'error': {'__all__': ex.message}}, status=400)
         user_params.update({
             'domain': request.get_host(),
             'port': request.get_port(),
@@ -86,21 +88,24 @@ class GenerateReport(BaseReportingView):
                     'find': previous.pk,
                     'created_at': previous.created_at,
                     'updated_at': previous.updated_at,
-                    'status ': previous.status,
+                    'status ': {
+                        'code': previous.status,
+                        'name': previous.get_status_display()
+                    },
                 }, status=200)
 
         query_pk = request.GET.get('notify')
         if query_pk:
             if not self.report.sender.storage_class_name:
-                return JsonResponse({'error': 'sender cannot storage files'}, status=400)
+                return JsonResponse({'error': {'report': 'sender cannot storage files'}}, status=400)
 
             if ReportQuery.objects.filter(params_hash=params_hash, pk=query_pk).exists():
-                ReportRequester.objects.create(
+                requester = ReportRequester.objects.create(
                     query_id=query_pk,
                     user=request.user,
                     user_params=json.dumps(user_params)
                 )
-                notify_report_done.delay(query_pk)
+                notify_report_done.delay(requester.pk)
                 return JsonResponse({
                     'accepted': query_pk,
                 }, status=202)
@@ -112,12 +117,13 @@ class GenerateReport(BaseReportingView):
             report=self.report,
             params=json.dumps(report_params)
         )
-        report = ReportRequester.objects.create(
+        ReportRequester.objects.create(
             query=query,
             user=request.user,
             user_params=json.dumps(user_params)
         )
-        generate_report.delay(report.pk)
+        generate_report.delay(query.pk)
+
         return JsonResponse({
             'created': query.pk,
         }, status=201)
