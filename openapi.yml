@@ -1,0 +1,154 @@
+openapi: 3.0.0
+info:
+  description: This is a simple API
+  version: "1.0.0"
+  title: Django easy report API
+  contact:
+    url: https://github.com/ehooo/django_easy_report
+  license:
+    name: MIT
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: creation
+    description: Creation flow
+  - name: donwloader
+    description: Download report
+paths:
+  /{report_name}:
+    post:
+      tags:
+        - creation
+      summary: Create a report or add on notification for one existed report.
+      operationId: create
+      description: Order generate a report.
+      parameters:
+        - in: path
+          name: report_name
+          description: Report path
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: generate
+          description: On/Off, 1/0 or true/false values indicate the you want force report generation.
+          schema:
+            type: boolean
+        - in: query
+          name: notify
+          description: Id of the report that you want to be notified when it is done.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+      responses:
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+             schema:
+               $ref: '#/components/schemas/ErrorValidation'
+        '403':
+          description: 'permissions required for use that report'
+          content:
+            application/json:
+             schema:
+               $ref: '#/components/schemas/ErrorMessage'
+        '404':
+          description: 'report or query not found'
+          content:
+            application/json:
+             schema:
+               $ref: '#/components/schemas/ErrorMessage'
+
+        '200':
+          description: similar report found with status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportQueryCreated'
+        '201':
+          description: 'report query created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportFound'
+        '202':
+          description: 'creaded query notification'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationAccepted'
+
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: string
+        description: Report data, each report will need different information
+
+components:
+  schemas:
+    ErrorMessage:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    ErrorValidation:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          example: {'report': 'sender cannot storage files'}
+
+    ReportFound:
+      type: object
+      required:
+        - find
+        - created_at
+        - updated_at
+        - status
+      properties:
+        find:
+          type: integer
+          example: 1
+          description: report query Id
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        status:
+          type: object
+          required:
+            - code
+            - name
+          properties:
+            code:
+              type: integer
+            name:
+              type: string
+
+    ReportQueryCreated:
+      type: object
+      required:
+        - created
+      properties:
+        created:
+          type: integer
+          example: 1
+          description: report query Id
+
+    NotificationAccepted:
+      type: object
+      required:
+        - accepted
+      properties:
+        accepted:
+          type: integer
+          example: 1
+          description: Notification Id
