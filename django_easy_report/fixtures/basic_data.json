@@ -1,0 +1,29 @@
+[
+  {
+    "model": "django_easy_report.reportsender",
+    "pk": 1,
+    "fields": {
+      "updated_at": "2021-09-04T00:54:51.378Z",
+      "name": "Local storage",
+      "email_from": "no-reply@localhost",
+      "size_to_attach": 100,
+      "storage_class_name": "django.core.files.storage.FileSystemStorage",
+      "storage_init_params": "{\r\n  \"location\":null,\r\n  \"base_url\":null,\r\n  \"file_permissions_mode\": null,\r\n  \"directory_permissions_mode\": null\r\n}"
+    }
+  },
+  {
+    "model": "django_easy_report.reportgenerator",
+    "pk": 1,
+    "fields": {
+      "updated_at": "2021-09-05T00:24:15.280Z",
+      "name": "User_report",
+      "class_name": "django_easy_report.reports.ReportModelGenerator",
+      "init_params": "{\r\n  \"model\":\"django.contrib.auth.models.User\",\r\n  \"fields\": [\"username\",\"email\",\"first_name\",\"last_name\",\"is_staff\",\"is_superuser\"]\r\n}",
+      "sender": 1,
+      "permissions": "auth.view_user",
+      "always_generate": false,
+      "always_download": false,
+      "preserve_report": false
+    }
+  }
+]

@@ -5,29 +5,15 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from django_easy_report.models import ReportSender, ReportGenerator, ReportQuery, ReportRequester
+from django_easy_report.models import ReportGenerator, ReportQuery, ReportRequester
 
 
 class ReportSenderTestCase(TestCase):
+    fixtures = ['basic_data.json']
+
     def setUp(self):
-        self.sender = ReportSender.objects.create(
-            name='local storage',
-            storage_class_name='django.core.files.storage.FileSystemStorage',
-            storage_init_params='{"location": "test_storage"}',
-            email_from='test@localhost'
-        )
-        self.report = ReportGenerator.objects.create(
-            name='users',
-            class_name='django_easy_report.reports.ReportModelGenerator',
-            init_params=json.dumps({
-                "model": "django.contrib.auth.models.User",
-                "fields": ["username", "email", "first_name", "last_name", "is_staff", "is_superuser"],
-                "user_fields": ["email"]
-            }),
-            sender=self.sender,
-            permissions='auth.view_user',
-        )
-        self.url = reverse('django_easy_report:report_generator', kwargs={'report_name': 'users'})
+        self.report = ReportGenerator.objects.get(name='User_report')
+        self.url = reverse('django_easy_report:report_generator', kwargs={'report_name': 'User_report'})
         self.user = User.objects.create_superuser('admin', 'admin@localhost', 'admin')
 
     def login(self):
@@ -62,6 +48,10 @@ class ReportSenderTestCase(TestCase):
     @patch('django_easy_report.views.generate_report')
     def test_create_request_without_form(self, mock_generator):
         self.login()
+        init_params = json.loads(self.report.init_params)
+        init_params["user_fields"] = ["email"]
+        self.report.init_params = json.dumps(init_params)
+        self.report.save()
         response = self.client.post(self.url, data={'email': 'test@localhost'},
                                     HTTP_HOST='localhost', SERVER_PORT=8000)
         user_params = self.check_creation_and_get_user_params(response)
@@ -79,7 +69,10 @@ class ReportSenderTestCase(TestCase):
 
     def set_form(self, drop_params=None, set_params=None):
         init_params = json.loads(self.report.init_params)
-        init_params.update({"form_class_name": "django_easy_report.forms.SendEmailForm"})
+        init_params.update({
+            "form_class_name": "django_easy_report.forms.SendEmailForm",
+            'email_field': 'send_to'
+        })
         if drop_params:
             for param in drop_params:
                 init_params.pop(param)
@@ -90,7 +83,7 @@ class ReportSenderTestCase(TestCase):
 
     @patch('django_easy_report.views.generate_report')
     def test_create_request_with_form(self, mock_generator):
-        self.set_form(set_params={"user_fields": ["send_to"]})
+        self.set_form()
         self.login()
         response = self.client.post(self.url, data={'send_to': 'test@localhost'})
         user_params = self.check_creation_and_get_user_params(response)
@@ -111,7 +104,6 @@ class ReportSenderTestCase(TestCase):
         self.assertEqual(body['error']['send_to'], ['Enter a valid email address.'])
 
     def test_create_request_with_unexpected_fields(self):
-        self.set_form()
         self.login()
         self.set_form(set_params={"user_fields": []})
         self.login()
@@ -192,14 +184,3 @@ class ReportSenderTestCase(TestCase):
         self.assertTrue(ReportRequester.objects.filter(pk=body.get('accepted')).exists())
         self.assertTrue(mock_notify.delay.called)
         self.assertTrue(mock_notify.delay.call_args, call(body.get('accepted')))
-
-    def test_notify_report_completed_without_storage(self):
-        self.sender.storage_class_name = ''
-        self.sender.save()
-        response = self.get_notify_report()
-
-        body = response.json()
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('error', body)
-        self.assertIn('report', body['error'])
-        self.assertEqual(body['error']['report'], 'sender cannot storage files')

@@ -7,14 +7,6 @@ from django_easy_report.models import ReportSender, ReportGenerator, ReportReque
 
 
 class ReportSenderValidationTestCase(TestCase):
-    def test_no_data(self):
-        sender = ReportSender(name='No data test')
-        self.assertRaisesMessage(
-            ValidationError,
-            'Email or Storage class must be entered',
-            sender.clean
-        )
-
     def test_storage_class_not_exist(self):
         sender = ReportSender(
             name='class NotExistFileSystemStorage not exist',

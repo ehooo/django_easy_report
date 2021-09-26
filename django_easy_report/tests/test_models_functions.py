@@ -12,12 +12,6 @@ from django_easy_report.reports import ReportModelGenerator
 
 
 class ReportSenderTestCase(TestCase):
-    def test_get_storage_without_class_name(self):
-        sender = ReportSender(
-            name='no storage',
-            email_from='test@localhost'
-        )
-        self.assertIsNone(sender.get_storage())
 
     def test_get_storage_class_not_exist(self):
         sender = ReportSender(
