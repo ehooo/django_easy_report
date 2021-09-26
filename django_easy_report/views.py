@@ -96,16 +96,13 @@ class GenerateReport(BaseReportingView):
 
         query_pk = request.GET.get('notify')
         if query_pk:
-            if not self.report.sender.storage_class_name:
-                return JsonResponse({'error': {'report': 'sender cannot storage files'}}, status=400)
-
             if ReportQuery.objects.filter(params_hash=params_hash, pk=query_pk).exists():
                 requester = ReportRequester.objects.create(
                     query_id=query_pk,
                     user=request.user,
                     user_params=json.dumps(user_params)
                 )
-                notify_report_done.delay(requester.pk)
+                notify_report_done.delay([requester.pk])
                 return JsonResponse({
                     'accepted': query_pk,
                 }, status=202)
