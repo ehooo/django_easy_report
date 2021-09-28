@@ -117,6 +117,11 @@ class ReportQueryGenHashTestCase(TestCase):
         self.assertEqual(hash1, hash2)
         self.assertEqual(hash1, hash3)
 
+    def test_invalid_object(self):
+        with self.assertRaises(TypeError) as error_context:
+            ReportQuery.gen_hash(str)
+        self.assertEqual(error_context.exception.args[0], 'data_dict must implements keys and get functions')
+
     def test_same_dict_different_order(self):
         hash1 = ReportQuery.gen_hash({'a': 'a', 'b': 'b'})
         hash2 = ReportQuery.gen_hash({'b': 'b', 'a': 'a'})

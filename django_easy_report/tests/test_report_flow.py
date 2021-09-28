@@ -162,7 +162,8 @@ class ReportSenderTestCase(TestCase):
         self.assertIn('error', body)
         self.assertEqual(body.get('error'), 'query not found')
 
-    def get_notify_report(self):
+    @patch('django_easy_report.views.notify_report_done')
+    def test_notify_report(self, mock_notify):
         query = ReportQuery.objects.create(
             filename='report.csv',
             params_hash=ReportQuery.gen_hash(None),
@@ -170,12 +171,7 @@ class ReportSenderTestCase(TestCase):
         )
         self.login()
         self.assertEqual(ReportRequester.objects.count(), 0)
-        return self.client.post(self.url + '?notify={}&generate=true'.format(query.pk), data={})
-
-    @patch('django_easy_report.views.notify_report_done')
-    def test_notify_report(self, mock_notify):
-        self.assertEqual(ReportRequester.objects.count(), 0)
-        response = self.get_notify_report()
+        response = self.client.post(self.url + '?notify={}'.format(query.pk), data={})
 
         body = response.json()
         self.assertEqual(ReportRequester.objects.count(), 1)

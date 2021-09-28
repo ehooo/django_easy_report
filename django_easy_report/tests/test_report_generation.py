@@ -229,6 +229,21 @@ class ReportNotifiedTestCase(ReportBaseTestCase):
         self.assertEqual(body, 'Invalid status (1000)')
 
     @patch('django_easy_report.tasks.EmailMessage')
+    def test_send_invalid_status_report_with_name(self, email_msg_mock):
+        query = self._create_query({}, {})
+        request = ReportRequester.objects.create(
+            query=query,
+            user=self.user,
+            user_params=json.dumps({}),
+        )
+
+        notify_report_done([request.id])
+
+        self.assertTrue(email_msg_mock.called)
+        subject, body, email_from, email_to = email_msg_mock.call_args[0]
+        self.assertEqual(body, 'Invalid status (Created)')
+
+    @patch('django_easy_report.tasks.EmailMessage')
     def test_without_elements(self, email_msg_mock):
         notify_report_done([])
         self.assertFalse(email_msg_mock.called)
