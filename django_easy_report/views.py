@@ -27,6 +27,8 @@ class BaseReportingView(View):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class GenerateReport(BaseReportingView):
+    KEY_GENERATE = 'generate'
+    KEY_NOTIFY = 'notify'
 
     def validate(self):
         if not self.report:
@@ -47,7 +49,10 @@ class GenerateReport(BaseReportingView):
         if self.report and self.report.always_generate:
             return True
 
-        force_generate = self.request.GET.get('generate')
+        if self.request.GET.get(self.KEY_NOTIFY):
+            return True
+
+        force_generate = self.request.GET.get(self.KEY_GENERATE)
         if isinstance(force_generate, str):
             force_generate = force_generate.lower() in ['on', 'true', '1']
         else:
@@ -94,7 +99,7 @@ class GenerateReport(BaseReportingView):
                     },
                 }, status=200)
 
-        query_pk = request.GET.get('notify')
+        query_pk = request.GET.get(self.KEY_NOTIFY)
         if query_pk:
             if ReportQuery.objects.filter(params_hash=params_hash, pk=query_pk).exists():
                 requester = ReportRequester.objects.create(
