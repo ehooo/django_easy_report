@@ -19,6 +19,9 @@ class ReportBaseGenerator(object):
     XLSX_MAX_ROWS = 1048576
     XLSX_MAX_COLUMNS = 16384
 
+    ODS_MAX_ROWS = 1048576
+    ODS_MAX_COLUMNS = 1024
+
     mimetype = 'application/octet-stream'
     form_class = None
     using = None

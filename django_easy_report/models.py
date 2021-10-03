@@ -246,6 +246,12 @@ class ReportQuery(models.Model):
     def __init__(self, *args, **kwargs):
         super(ReportQuery, self).__init__(*args, **kwargs)
         self.__report = None
+        self.__params = None
+
+    def refresh_from_db(self, *args, **kwargs):
+        super(ReportQuery, self).refresh_from_db(*args, **kwargs)
+        self.__report = None
+        self.__params = None
 
     def clean(self):
         super(ReportQuery, self).clean()
@@ -321,6 +327,11 @@ class ReportQuery(models.Model):
                 return redirect(url)
         return storage.open(self.storage_path_location, 'r')
 
+    def get_params(self):
+        if self.params and self.__params is None:
+            self.__params = json.loads(self.params)
+        return self.__params
+
 
 @receiver(pre_delete, sender=ReportQuery)
 def delete_report_from_storage(sender, instance, **kwargs):
@@ -342,6 +353,14 @@ class ReportRequester(models.Model):
     user_params = models.TextField(blank=True, null=True)
     notified = models.BooleanField(default=False)
 
+    def __init__(self, *args, **kwargs):
+        super(ReportRequester, self).__init__(*args, **kwargs)
+        self.__params = None
+
+    def refresh_from_db(self, *args, **kwargs):
+        super(ReportRequester, self).refresh_from_db(*args, **kwargs)
+        self.__params = None
+
     def clean(self):
         super(ReportRequester, self).clean()
 
@@ -352,3 +371,8 @@ class ReportRequester(models.Model):
                 raise ValidationError({
                     'user_params': _('Invalid JSON')
                 })
+
+    def get_params(self):
+        if self.user_params and self.__params is None:
+            self.__params = json.loads(self.user_params)
+        return self.__params
