@@ -7,7 +7,7 @@ info:
     url: https://github.com/ehooo/django_easy_report
   license:
     name: MIT
-    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    url: 'https://opensource.org/licenses/MIT'
 tags:
   - name: creation
     description: Creation flow
