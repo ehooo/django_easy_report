@@ -1,0 +1,3 @@
+
+class DoNotSend(Exception):
+    pass

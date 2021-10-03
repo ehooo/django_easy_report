@@ -5,6 +5,7 @@ from django.core.mail import EmailMessage
 from django.db import transaction
 
 from django_easy_report.constants import STATUS_ERROR, STATUS_DONE, STATUS_WORKING
+from django_easy_report.exceptions import DoNotSend
 from django_easy_report.models import ReportRequester, ReportQuery
 
 
@@ -81,6 +82,10 @@ def notify_report_done(requester_pks):
                 mail.attach(query.filename, content, query.mimetype)
 
             mail.send()
+        except DoNotSend:
+            logger.info('Report will not be send',
+                        extra={'query_pk': query.pk, 'requester_pk': requester.pk})
+            continue
         except Exception:
             # Only update notified if it was falling in other case the previous updated set as true
             requester.notified = False
