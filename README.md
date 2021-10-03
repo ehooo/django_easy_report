@@ -92,8 +92,9 @@ class MyReportGenerator(ReportBaseGenerator):
         num_rows = 0
         # ...
         return num_rows
-
 ```
+2. Create report Sender on Admin page
+3. Create Report Generator on Admin page
 
 # License
 Copyright 2021 Victor Torre
