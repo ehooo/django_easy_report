@@ -199,7 +199,7 @@ class ReportModelGenerator(ReportBaseGenerator):
             user_params = json.loads(requester.user_params)
             if self.email_field in user_params:
                 return user_params[self.email_field]
-        return getattr(requester.user, requester.user.get_email_field_name())
+        return super(ReportModelGenerator, self).get_email(requester)
 
     def get_row(self, obj, default=''):
         """

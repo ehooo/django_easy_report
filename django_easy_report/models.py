@@ -295,10 +295,7 @@ class ReportQuery(models.Model):
         """
         if self.__report is None or force:
             self.__report = self.report.get_report()
-            kwargs = {}
-            if self.params:
-                kwargs = json.loads(self.params)
-            self.__report.setup(self, **kwargs)
+            self.__report.setup(self, **self.get_params())
         return self.__report
 
     def get_file_size(self):
@@ -325,11 +322,18 @@ class ReportQuery(models.Model):
             url = self.get_url()
             if url:
                 return redirect(url)
-        return storage.open(self.storage_path_location, 'r')
+
+        if storage.exists(self.storage_path_location):
+            return storage.open(self.storage_path_location, 'r')
 
     def get_params(self):
-        if self.params and self.__params is None:
-            self.__params = json.loads(self.params)
+        """
+        :rtype: dict
+        """
+        if self.__params is None:
+            self.__params = {}
+            if self.params:
+                self.__params = json.loads(self.params)
         return self.__params
 
 
@@ -373,6 +377,11 @@ class ReportRequester(models.Model):
                 })
 
     def get_params(self):
-        if self.user_params and self.__params is None:
-            self.__params = json.loads(self.user_params)
+        """
+        :rtype: dict
+        """
+        if self.__params is None:
+            self.__params = {}
+            if self.user_params:
+                self.__params = json.loads(self.user_params)
         return self.__params

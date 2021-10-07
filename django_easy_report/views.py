@@ -21,7 +21,7 @@ class BaseReportingView(View):
         permissions = []
         if self.report and self.report.permissions:
             permissions = self.report.get_permissions()
-        if not self.request.user.has_perms(permissions):
+        if not (self.request.user.is_authenticated and self.request.user.has_perms(permissions)):
             raise PermissionDenied()
 
 
@@ -140,13 +140,13 @@ class DownloadReport(BaseReportingView):
             raise Http404()
         self.check_permissions()
 
-        try:
-            f = query.get_file()
-        except FileNotFoundError:
+        remote_file = query.get_file()
+        if remote_file is None:
             raise Http404()
-        if isinstance(f, HttpResponse):
-            return f
-        response = HttpResponse(f, mimetype=query.mimetype)
+        if isinstance(remote_file, HttpResponse):
+            return remote_file
+        response = HttpResponse(remote_file)
         filename = os.path.basename(query.filename)
         response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
+        response['Content-Type'] = query.mimetype
         return response

@@ -114,7 +114,7 @@ class ReportNotifiedTestCase(ReportBaseTestCase):
         storage = self.report.sender.get_storage()
         buffer = StringIO()
         if content:
-            buffer.write('Header\ncontent')
+            buffer.write(content)
         elif size:
             buffer.write('A' * size)
         buffer.seek(0)

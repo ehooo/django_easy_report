@@ -250,10 +250,7 @@ class ReportQueryTestCase(TestCase):
             storage_path_location='tmp/report.csv'
         )
 
-        with self.assertRaises(FileNotFoundError) as error_context:
-            query.get_file()
-
-        self.assertEqual(error_context.exception.args, (2, 'No such file or directory'))
+        self.assertIsNone(query.get_file())
 
     def _prepare_storage_file(self, tmpdirname):
         self.sender.storage_init_params = json.dumps({"location": tmpdirname})
