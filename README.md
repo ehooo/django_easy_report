@@ -1,5 +1,5 @@
 # Django easy report
-Django App for generate easily reports
+Django App for generate easily reports using [Celery](https://docs.celeryproject.org/en/stable/index.html)
 
 ## API workflow
 See doc as [OpenAPI format](./openapi.yml)
@@ -11,10 +11,44 @@ See doc as [OpenAPI format](./openapi.yml)
 * Regenerate new report
 ![generate new report](./doc/Django_easy_report-Regenerate report example.png)
 
+# SetUp
+* Add application on `settings.py`:
+```python
+# ...
+INSTALLED_APPS = [
+# ...
+    'django_easy_report',
+# ...
+]
+```
+* Add on `urls.py` the namespace `django_easy_report`:
+```python
+# ...
+urlpatterns = [
+    # ...
+    path('reports/', include(('django_easy_report.urls', 'django_easy_report'), namespace='django_easy_report')),
+    # ...
+]
+```
+* Configure [celery](https://docs.celeryproject.org/en/stable/django/first-steps-with-django.html)
+
 # Howto
 1. Create your code ([see example](./django_easy_report/tests/test_example.py))
 2. Create report Sender on Admin page
 3. Create Report Generator on Admin page
+
+## Test it with Docker
+* Docker-compose
+```shell
+docker-compose up web -d
+docker-compose exec web bash
+```
+* Docker
+```shell
+docker build . --tag="django_easy_report:latest"
+docker run --publish=8000:8000 --name=django_easy_report_web django_easy_report:latest -d
+docker exec -ti django_easy_report_web bash
+```
 
 # License
 Copyright 2021 Victor Torre
