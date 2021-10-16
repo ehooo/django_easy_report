@@ -20,7 +20,7 @@ RUN apk update && apk add bash
 COPY --from=builder /dist/django-easy-report-*.tar.gz ./
 
 ADD ./test_web/requirements.txt .
-RUN echo "pip install django==${DJANGO_VERSION}" && \
+RUN pip install django==${DJANGO_VERSION} && \
     pip install django-easy-report* && \
     pip install -r requirements.txt && rm requirements.txt
 

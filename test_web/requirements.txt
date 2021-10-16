@@ -1,9 +1,8 @@
 django-extensions
-virtualenv
+django-pdb
 coverage
 Werkzeug
 ipdb
 flake8
 
-django-storages
 django-celery-results

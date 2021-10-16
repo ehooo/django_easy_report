@@ -6,7 +6,17 @@ from django.test import TestCase
 from django_easy_report.models import ReportSender, ReportGenerator, ReportRequester, ReportQuery
 
 
-class ReportSenderValidationTestCase(TestCase):
+class BaseValidationTestCase(TestCase):
+    def assertValidation(self, error_context, key, message):
+        self.assertIn(key, error_context.exception.error_dict)
+        error = error_context.exception.error_dict[key]
+        if isinstance(error, list):
+            self.assertEqual(len(error), 1)
+            error = error[0]
+        self.assertEqual(error.message, message)
+
+
+class ReportSenderValidationTestCase(BaseValidationTestCase):
     def test_storage_class_not_exist(self):
         sender = ReportSender(
             name='class NotExistFileSystemStorage not exist',
@@ -16,14 +26,8 @@ class ReportSenderValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             sender.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'storage_class_name': [
-                    ValidationError('Class "django.core.files.storage.NotExistFileSystemStorage" cannot be imported')
-                ]
-            }
-        )
+        message = 'Class "django.core.files.storage.NotExistFileSystemStorage" cannot be imported'
+        self.assertValidation(error_context, 'storage_class_name', message)
 
     def test_storage_class_module_not_exist(self):
         sender = ReportSender(
@@ -34,14 +38,8 @@ class ReportSenderValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             sender.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'storage_class_name': [
-                    ValidationError('Class "module_not_exists.class_name" cannot be imported')
-                ]
-            }
-        )
+        message = 'Class "module_not_exists.class_name" cannot be imported'
+        self.assertValidation(error_context, 'storage_class_name', message)
 
     def test_storage_class_wrong_class(self):
         sender = ReportSender(
@@ -52,14 +50,8 @@ class ReportSenderValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             sender.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'storage_class_name': [
-                    ValidationError('Invalid class "datetime.datetime", must be instance of Storage')
-                ]
-            }
-        )
+        message = 'Invalid class "datetime.datetime", must be instance of Storage'
+        self.assertValidation(error_context, 'storage_class_name', message)
 
     def test_init_params_wrong_json(self):
         sender = ReportSender(
@@ -71,14 +63,7 @@ class ReportSenderValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             sender.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'storage_init_params': [
-                    ValidationError('Invalid JSON')
-                ]
-            }
-        )
+        self.assertValidation(error_context, 'storage_init_params', 'Invalid JSON')
 
     def test_init_params_wrong_params(self):
         sender = ReportSender(
@@ -90,14 +75,8 @@ class ReportSenderValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             sender.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'storage_init_params': [
-                    ValidationError("__init__() got an unexpected keyword argument 'param_not_exist'")
-                ]
-            }
-        )
+        message = "__init__() got an unexpected keyword argument 'param_not_exist'"
+        self.assertValidation(error_context, 'storage_init_params', message)
 
     def test_all_fine(self):
         sender = ReportSender(
@@ -112,7 +91,7 @@ class ReportSenderValidationTestCase(TestCase):
             self.fail('Unexpected exception {}'.format(ex))
 
 
-class ReportGeneratorValidationTestCase(TestCase):
+class ReportGeneratorValidationTestCase(BaseValidationTestCase):
 
     def test_no_data(self):
         report = ReportGenerator(
@@ -123,14 +102,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'class_name': [
-                    ValidationError('Class "" cannot be imported')
-                ]
-            }
-        )
+        message = 'Class "" cannot be imported'
+        self.assertValidation(error_context, 'class_name', message)
 
     def test_class_not_exist(self):
         report = ReportGenerator(
@@ -140,13 +113,8 @@ class ReportGeneratorValidationTestCase(TestCase):
 
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
-
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {'class_name': [
-                ValidationError('Class "django_easy_report.reports.NotExistReportModelGenerator" cannot be imported')
-            ]}
-        )
+        message = 'Class "django_easy_report.reports.NotExistReportModelGenerator" cannot be imported'
+        self.assertValidation(error_context, 'class_name', message)
 
     def test_class_name_module_not_exist(self):
         report = ReportGenerator(
@@ -157,14 +125,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'class_name': [
-                    ValidationError('Class "module_not_exists.class_name" cannot be imported')
-                ]
-            }
-        )
+        message = 'Class "module_not_exists.class_name" cannot be imported'
+        self.assertValidation(error_context, 'class_name', message)
 
     def test_wrong_class_name(self):
         report = ReportGenerator(
@@ -175,14 +137,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'class_name': [
-                    ValidationError('Invalid class "datetime.datetime", must be instance of ReportBaseGenerator')
-                ]
-            }
-        )
+        message = 'Invalid class "datetime.datetime", must be instance of ReportBaseGenerator'
+        self.assertValidation(error_context, 'class_name', message)
 
     def test_init_params_wrong_json(self):
         report = ReportGenerator(
@@ -194,14 +150,7 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'init_params': [
-                    ValidationError('Invalid JSON')
-                ]
-            }
-        )
+        self.assertValidation(error_context, 'init_params', 'Invalid JSON')
 
     def test_init_params_wrong_params(self):
         report = ReportGenerator(
@@ -213,14 +162,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'init_params': [
-                    ValidationError("__init__() missing 2 required positional arguments: 'model' and 'fields'")
-                ]
-            }
-        )
+        message = "__init__() missing 2 required positional arguments: 'model' and 'fields'"
+        self.assertValidation(error_context, 'init_params', message)
 
     def test_init_params_wrong_values(self):
         report = ReportGenerator(
@@ -235,7 +178,7 @@ class ReportGeneratorValidationTestCase(TestCase):
         self.assertIn('init_params', error_context.exception.error_dict)
         errors = error_context.exception.error_dict['init_params']
         self.assertEqual(1, len(errors))
-        self.assertIn('Error creating report class: ', errors[0].message,)
+        self.assertIn('Error creating report class: ', errors[0].message)
 
     def test_not_exist_content_type(self):
         report = ReportGenerator(
@@ -250,14 +193,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'permissions': [
-                    ValidationError('Unknown content type for permission: "not_exist.permission"')
-                ]
-            }
-        )
+        message = 'Unknown content type for permission: "not_exist.permission"'
+        self.assertValidation(error_context, 'permissions', message)
 
     def test_not_exist_permission(self):
         report = ReportGenerator(
@@ -272,14 +209,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'permissions': [
-                    ValidationError('Unknown code name for permission: "auth.not_exist_permission"')
-                ]
-            }
-        )
+        message = 'Unknown code name for permission: "auth.not_exist_permission"'
+        self.assertValidation(error_context, 'permissions', message)
 
     def test_invalid_permission_format(self):
         report = ReportGenerator(
@@ -294,14 +225,8 @@ class ReportGeneratorValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             report.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'permissions': [
-                    ValidationError('Invalid permission: "auth.user.view_user"')
-                ]
-            }
-        )
+        message = 'Invalid permission: "auth.user.view_user"'
+        self.assertValidation(error_context, 'permissions', message)
 
     def test_all_fine(self):
         report = ReportGenerator(
@@ -319,7 +244,7 @@ class ReportGeneratorValidationTestCase(TestCase):
             self.fail('Unexpected exception {}'.format(ex))
 
 
-class ReportQueryValidationTestCase(TestCase):
+class ReportQueryValidationTestCase(BaseValidationTestCase):
 
     def test_user_params_wrong_json(self):
         query = ReportQuery(
@@ -331,14 +256,7 @@ class ReportQueryValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             query.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'params': [
-                    ValidationError('Invalid JSON')
-                ]
-            }
-        )
+        self.assertValidation(error_context, 'params', 'Invalid JSON')
 
     def test_all_fine(self):
         query = ReportQuery(
@@ -353,7 +271,7 @@ class ReportQueryValidationTestCase(TestCase):
             self.fail('Unexpected exception {}'.format(ex))
 
 
-class ReportRequesterValidationTestCase(TestCase):
+class ReportRequesterValidationTestCase(BaseValidationTestCase):
     def test_user_params_wrong_json(self):
         requester = ReportRequester(
             user_params='no json',
@@ -362,14 +280,7 @@ class ReportRequesterValidationTestCase(TestCase):
         with self.assertRaises(ValidationError) as error_context:
             requester.clean()
 
-        self.assertEqual(
-            error_context.exception.error_dict,
-            {
-                'user_params': [
-                    ValidationError('Invalid JSON')
-                ]
-            }
-        )
+        self.assertValidation(error_context, 'user_params', 'Invalid JSON')
 
     def test_all_fine(self):
         requester = ReportRequester(

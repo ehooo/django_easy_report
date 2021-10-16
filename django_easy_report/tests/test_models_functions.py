@@ -236,7 +236,7 @@ class ReportQueryTestCase(TestCase):
         )
         response = query.get_file()
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/tmp/report.csv')
+        self.assertTrue(response.url.endswith('tmp/report.csv'))
 
     def test_get_file_open_file_not_found(self):
         self.sender.save()

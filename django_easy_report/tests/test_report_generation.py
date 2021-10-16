@@ -169,7 +169,8 @@ class ReportNotifiedTestCase(ReportBaseTestCase):
             self.assertTrue(request.notified)
             self.assertTrue(email_msg_mock.called)
             subject, body, email_from, email_to = email_msg_mock.call_args[0]
-            self.assertEqual(body, 'Report completed. Download from <a href="/report.dat">here<a/>')
+            self.assertTrue(body.startswith('Report completed. Download from <a href="'))
+            self.assertTrue(body.endswith('report.dat">here<a/>'))
             email_cls = email_msg_mock.return_value
             self.assertFalse(email_cls.attach.called)
             self.assertTrue(email_cls.send.called)

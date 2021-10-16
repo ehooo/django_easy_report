@@ -91,8 +91,11 @@ class DownloaderTestCase(TestCase):
 
             response = self.client.get(self.url)
             self.assertEqual(response.status_code, 302)
-            self.assertIn('Location', response.headers)
-            self.assertEqual(response.headers['Location'], '/test.csv')
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Location', headers)
+            self.assertTrue(headers['Location'].endswith('test.csv'))
 
     def test_direct_download(self):
         self.client.force_login(self.user)
@@ -105,10 +108,13 @@ class DownloaderTestCase(TestCase):
             response = self.client.get(self.url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.content, b'Just a test')
-            self.assertIn('Content-Type', response.headers)
-            self.assertEqual(response.headers['Content-Type'], 'text/csv')
-            self.assertIn('Content-Disposition', response.headers)
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Content-Type', headers)
+            self.assertEqual(headers['Content-Type'], 'text/csv')
+            self.assertIn('Content-Disposition', headers)
             self.assertEqual(
-                response.headers['Content-Disposition'],
+                headers['Content-Disposition'],
                 'attachment; filename=test.csv'
             )

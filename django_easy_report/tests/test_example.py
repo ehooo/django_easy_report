@@ -138,29 +138,41 @@ class ReportQueryTestCase(TestCase):
     def test_csv(self):
         with TemporaryDirectory() as tmp_dirname:
             response = self.do_flow('csv', tmp_dirname)
-            self.assertIn('Content-Type', response.headers)
-            self.assertIn(response.headers['Content-Type'], 'text/csv')
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Content-Type', headers)
+            self.assertIn(headers['Content-Type'], 'text/csv')
             self.assertEqual(response.content, b'Your report data')
 
     def test_ods(self):
         with TemporaryDirectory() as tmp_dirname:
             response = self.do_flow('ods', tmp_dirname)
-            self.assertIn('Content-Type', response.headers)
-            self.assertIn(response.headers['Content-Type'], 'application/vnd.oasis.opendocument.spreadsheet')
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Content-Type', headers)
+            self.assertIn(headers['Content-Type'], 'application/vnd.oasis.opendocument.spreadsheet')
             self.assertEqual(response.content, b'Your report data')
 
     def test_xls(self):
         with TemporaryDirectory() as tmp_dirname:
             response = self.do_flow('xls', tmp_dirname)
-            self.assertIn('Content-Type', response.headers)
-            self.assertIn(response.headers['Content-Type'], 'application/vnd.ms-excel')
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Content-Type', headers)
+            self.assertIn(headers['Content-Type'], 'application/vnd.ms-excel')
             self.assertEqual(response.content, b'Your report data')
 
     def test_xlsx(self):
         with TemporaryDirectory() as tmp_dirname:
             response = self.do_flow('xlsx', tmp_dirname)
-            self.assertIn('Content-Type', response.headers)
-            self.assertIn(response.headers['Content-Type'],
+            headers = response
+            if hasattr(response, 'headers'):
+                headers = response.headers
+            self.assertIn('Content-Type', headers)
+            self.assertIn(headers['Content-Type'],
                           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             self.assertEqual(response.content, b'Your report data')
 
