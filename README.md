@@ -3,15 +3,22 @@ Django App for generate easily reports using [Celery](https://docs.celeryproject
 
 ## API workflow
 See doc as [OpenAPI format](./openapi.yml)
-![work flow](./doc/Django_easy_report-Generic flow.png)
+
+![work flow](https://raw.githubusercontent.com/ehooo/django_easy_report/main/doc/Django_easy_report-Generic%20flow.png)
 
 ### Examples
 * Notify me when report is done
-![notify me when report is done](./doc/Django_easy_report-Notify example.png)
+
+![notify me when report is done](https://raw.githubusercontent.com/ehooo/django_easy_report/main/doc/Django_easy_report-Notify%20example.png)
 * Regenerate new report
-![generate new report](./doc/Django_easy_report-Regenerate report example.png)
+
+![generate new report](https://raw.githubusercontent.com/ehooo/django_easy_report/main/doc/Django_easy_report-Regenerate%20report%20example.png)
 
 # SetUp
+* Install package:
+```shell
+pip install django-easy-report
+```
 * Add application on `settings.py`:
 ```python
 # ...
