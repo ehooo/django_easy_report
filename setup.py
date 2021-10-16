@@ -20,7 +20,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "django_easy_report"},
-    packages=setuptools.find_packages(where="django_easy_report"),
+    packages=setuptools.find_packages(include=('django_easy_report', 'django_easy_report.*')),
     python_requires=">=3.5",
+    install_requires=[
+        'django',
+        'celery'
+    ]
 )
