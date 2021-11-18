@@ -6,3 +6,4 @@ ipdb
 flake8
 
 django-celery-results
+cryptography

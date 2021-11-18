@@ -1,5 +1,7 @@
+import base64
 import hashlib
 import json
+import os
 
 from django.conf import settings
 from django.contrib.auth.models import Permission
@@ -12,9 +14,105 @@ from django.dispatch import receiver
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
 
+from django_easy_report.choices import MODE_ENVIRONMENT, MODE_DJANGO_SETTINGS, MODE_CRYPTOGRAPHY, \
+    MODE_CRYPTOGRAPHY_ENVIRONMENT, MODE_CRYPTOGRAPHY_DJANGO
 from django_easy_report.constants import STATUS_CREATED, STATUS_OPTIONS
 from django_easy_report.reports import ReportBaseGenerator
-from django_easy_report.utils import create_class, import_class
+from django_easy_report.utils import create_class, import_class, get_key, encrypt
+
+try:
+    from cryptography.fernet import Fernet
+except ImportError:  # pragma: no cover
+    Fernet = None
+
+
+class SecretKeyManager(models.Manager):
+    def create_secret(self, **kwargs):
+        mode = kwargs.get('mode')
+        if mode & MODE_CRYPTOGRAPHY:
+            if not Fernet:
+                raise ValidationError('Invalid mode, "cryptography.fernet.Fernet" cannot be imported.')
+            key = get_key(mode, kwargs.get('key'))
+            kwargs['value'] = encrypt(key, kwargs.pop('value'))
+        return self.create(**kwargs)
+
+
+class SecretKey(models.Model):
+    MODE_CHOICES = [
+        (MODE_ENVIRONMENT, _('Environment')),
+        (MODE_DJANGO_SETTINGS, _('Django Settings')),
+    ]
+    if Fernet:
+        MODE_CHOICES.extend([
+            (MODE_CRYPTOGRAPHY, _('Cryptography')),
+            (MODE_CRYPTOGRAPHY_ENVIRONMENT, _('Cryptography from Environment key')),
+            (MODE_CRYPTOGRAPHY_DJANGO, _('Cryptography from Django secret')),
+        ])
+    mode = models.PositiveSmallIntegerField(choices=MODE_CHOICES)
+    name = models.CharField(max_length=64, unique=True)
+    value = models.CharField(
+        max_length=512,
+        help_text=_('Environment key, Django setting name or with Cryptography mode encrypted value')
+    )
+    key = models.CharField(
+        max_length=32, blank=True, null=True,
+        help_text=_('With Cryptography: Environment key, Django setting name or Secret key')
+    )
+
+    objects = SecretKeyManager()
+
+    def __str__(self):  # pragma: no cover
+        return self.name
+
+    def get_key(self):
+        if Fernet and self.mode & MODE_CRYPTOGRAPHY:
+            return get_key(self.mode, self.key)
+
+    def get_secret(self):
+        if self.mode == MODE_ENVIRONMENT:
+            return os.environ.get(self.value)
+        elif self.mode == MODE_DJANGO_SETTINGS:
+            return getattr(settings, self.value, None)
+        elif (
+                Fernet and self.mode & MODE_CRYPTOGRAPHY
+        ):
+            key = base64.urlsafe_b64encode(self.get_key())
+            return Fernet(key).decrypt(self.value.encode()).decode()
+
+    def clean(self):
+        super(SecretKey, self).clean()
+
+        if self.mode in [MODE_ENVIRONMENT, MODE_DJANGO_SETTINGS] and self.key:
+            raise ValidationError({'key': _('Key only valid for cryptography mode.')})
+        if not Fernet and self.mode & MODE_CRYPTOGRAPHY:
+            raise ValidationError({'mode': _('Invalid mode, cryptography not supported.')})
+
+        if self.mode & MODE_ENVIRONMENT:
+            field = 'value'
+            env = self.value
+            if self.mode & MODE_CRYPTOGRAPHY:
+                if not self.key:
+                    raise ValidationError({'key': _('This field is required.')})
+                field = 'key'
+                env = self.key
+            if not env or env not in os.environ:
+                raise ValidationError({field: _('Environment "{}" not found.').format(env)})
+
+        if self.mode & MODE_DJANGO_SETTINGS:
+            if self.mode & MODE_CRYPTOGRAPHY:
+                if self.key:
+                    if not hasattr(settings, self.key):
+                        raise ValidationError({'key': _('Setting "{}" not found.').format(self.key)})
+                    elif not isinstance(getattr(settings, self.key), str):
+                        raise ValidationError({
+                            'key': _('Invalid type for setting "{}", only str is allowed.').format(self.key)
+                        })
+            elif not hasattr(settings, self.value):
+                raise ValidationError({'value': _('Setting "{}" not found.').format(self.value)})
+            elif not isinstance(getattr(settings, self.value), str):
+                raise ValidationError({
+                    'value': _('Invalid type for setting "{}", only str is allowed.').format(self.value)
+                })
 
 
 class ReportSender(models.Model):
@@ -48,59 +146,32 @@ class ReportSender(models.Model):
     def __str__(self):  # pragma: no cover
         return self.name
 
-    def clean(self):
-        super(ReportSender, self).clean()
-
-        errors = {}
-        if self.storage_init_params:
-            try:
-                json.loads(self.storage_init_params)
-            except json.JSONDecodeError:
-                errors.update({
-                    'storage_init_params': _('Invalid JSON')
-                })
-
-        try:
-            cls = import_class(self.storage_class_name)
-            if not issubclass(cls, Storage):
-                errors.update({
-                    'storage_class_name': 'Invalid class "{}", must be instance of Storage'.format(
-                        self.storage_class_name
-                    )
-                })
-            elif 'storage_init_params' not in errors:
-                try:
-                    self.get_storage()
-                except TypeError as type_error:
-                    errors.update({
-                        'storage_init_params': str(type_error)
-                    })
-                except Exception as ex:
-                    errors.update({
-                        'storage_init_params': _('Error creating storage class: "{}"').format(ex)
-                    })
-
-        except (ImportError, ValueError):
-            errors.update({
-                'storage_class_name': _('Class "{}" cannot be imported').format(
-                    self.storage_class_name
-                )
-            })
-
-        if errors:
-            raise ValidationError(errors)
-
     def get_storage(self, force_load=False):
         """
         :return:
         :rtype: Storage
         """
         if self.__storage is None or force_load:
-            cls = create_class(self.storage_class_name, self.storage_init_params)
+            replace = {}
+            for replace_item in self.secretreplace_set.all():
+                replace[replace_item.replace_word] = replace_item.secret.get_secret()
+            cls = create_class(self.storage_class_name, self.storage_init_params, replace=replace)
             if not isinstance(cls, Storage):
                 raise ImportError('Only Storage classes are allowed')
             self.__storage = cls
         return self.__storage
+
+
+class SecretReplace(models.Model):
+    secret = models.ForeignKey(SecretKey, on_delete=models.CASCADE)
+    report = models.ForeignKey(ReportSender, on_delete=models.CASCADE)
+    replace_word = models.SlugField(
+        max_length=16,
+        help_text=_('Word that will be replaced on "storage init params" field if is market as "${WORD}"')
+    )
+
+    class Meta:
+        unique_together = ('secret', 'report')
 
 
 class ReportGenerator(models.Model):
