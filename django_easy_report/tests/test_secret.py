@@ -14,7 +14,6 @@ from django_easy_report.choices import (
 from django_easy_report.models import SecretKey
 from django_easy_report.tests.test_models_validation import BaseValidationTestCase
 from django_easy_report import utils
-from utils import create_class
 
 
 class SecretKeyModelTestCase(TestCase):
@@ -317,7 +316,7 @@ class ReplaceSecretTestCase(BaseValidationTestCase):
             "in_obj": {"key": ${secret}}
         }"""
         replace = {'secret': '\'$ECRET\\"'}
-        cls = create_class('tests.test_secret.TestClass', json_params, replace=replace)
+        cls = utils.create_class('django_easy_report.tests.test_secret.TestClass', json_params, replace=replace)
         self.assertEqual(cls.kwargs.get('direct'), '\'$ECRET\\"')
         self.assertEqual(cls.kwargs.get('in_obj', {}).get('key'), '\'$ECRET\\"')
 

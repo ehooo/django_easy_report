@@ -21,9 +21,10 @@ from django_easy_report.reports import ReportBaseGenerator
 from django_easy_report.utils import create_class, import_class, get_key, encrypt
 
 try:
-    from cryptography.fernet import Fernet
+    from cryptography.fernet import Fernet, InvalidToken
 except ImportError:  # pragma: no cover
     Fernet = None
+    InvalidToken = Exception
 
 
 class SecretKeyManager(models.Manager):
@@ -98,7 +99,7 @@ class SecretKey(models.Model):
             if not env or env not in os.environ:
                 raise ValidationError({field: _('Environment "{}" not found.').format(env)})
 
-        if self.mode & MODE_DJANGO_SETTINGS:
+        elif self.mode & MODE_DJANGO_SETTINGS:
             if self.mode & MODE_CRYPTOGRAPHY:
                 if self.key:
                     if not hasattr(settings, self.key):
@@ -112,6 +113,22 @@ class SecretKey(models.Model):
             elif not isinstance(getattr(settings, self.value), str):
                 raise ValidationError({
                     'value': _('Invalid type for setting "{}", only str is allowed.').format(self.value)
+                })
+
+        if self.mode & MODE_CRYPTOGRAPHY:
+            key = self.get_key()
+            if key is None:
+                raise ValidationError({
+                    'key': _('Invalid value')
+                })
+            try:
+                if self.get_secret() is None:
+                    raise ValidationError({
+                        'value': _('Invalid secret')
+                    })
+            except InvalidToken:
+                raise ValidationError({
+                    'value': _('Invalid secret')
                 })
 
 

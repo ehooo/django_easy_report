@@ -7,12 +7,31 @@ from django.core.files.storage import Storage
 from django.utils.translation import gettext as _
 
 from django_easy_report.models import ReportSender, SecretKey
-from django_easy_report.utils import create_class, import_class
+from django_easy_report.utils import create_class, import_class, encrypt
 
 
 class SendEmailForm(forms.Form):
     send_to = forms.EmailField()
 
+
+class SecretKeyForm(forms.ModelForm):
+    class Meta:
+        model = SecretKey
+        fields = '__all__'
+
+    def clean(self):
+        super(SecretKeyForm, self).clean()
+        if not self.instance.id:
+            secret = SecretKey(
+                mode=self.cleaned_data.get('mode'),
+                key=self.cleaned_data.get('key'),
+            )
+            try:
+                key = secret.get_key()
+            except TypeError:
+                raise ValidationError({'key': _('Invalid type')})
+            self.cleaned_data['value'] = encrypt(key, self.cleaned_data.get('value'))
+        return self.cleaned_data
 
 class ReportSenderForm(forms.ModelForm):
     class Meta:

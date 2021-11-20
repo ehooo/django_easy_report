@@ -52,6 +52,10 @@ def get_key(mode, key=None):
                 key and hasattr(settings, key)
         ):
             final_key = getattr(settings, key)
+        if not isinstance(final_key, str):
+            raise TypeError('Invalid key type "{}" is not allowed, only str is valid'.format(
+                type(final_key).__name__)
+            )
         size = len(final_key)
         if size >= 32:
             final_key = final_key[:32]
