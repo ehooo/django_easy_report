@@ -83,7 +83,9 @@ class SecretKey(models.Model):
     def clean(self):
         super(SecretKey, self).clean()
 
-        if self.mode in [MODE_ENVIRONMENT, MODE_DJANGO_SETTINGS] and self.key:
+        if not self.mode:
+            raise ValidationError({'key': _('Invalid type.')})
+        elif self.mode in [MODE_ENVIRONMENT, MODE_DJANGO_SETTINGS] and self.key:
             raise ValidationError({'key': _('Key only valid for cryptography mode.')})
         if not Fernet and self.mode & MODE_CRYPTOGRAPHY:
             raise ValidationError({'mode': _('Invalid mode, cryptography not supported.')})
@@ -116,10 +118,15 @@ class SecretKey(models.Model):
                 })
 
         if self.mode & MODE_CRYPTOGRAPHY:
-            key = self.get_key()
-            if key is None:
+            try:
+                key = self.get_key()
+                if key is None:
+                    raise ValidationError({
+                        'key': _('Invalid value')
+                    })
+            except TypeError:
                 raise ValidationError({
-                    'key': _('Invalid value')
+                    'key': _('Invalid type.')
                 })
             try:
                 if self.get_secret() is None:

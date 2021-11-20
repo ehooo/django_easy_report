@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.storage import Storage
 from django.utils.translation import gettext as _
 
+from django_easy_report.choices import MODE_CRYPTOGRAPHY
 from django_easy_report.models import ReportSender, SecretKey
 from django_easy_report.utils import create_class, import_class, encrypt
 
@@ -21,15 +22,16 @@ class SecretKeyForm(forms.ModelForm):
 
     def clean(self):
         super(SecretKeyForm, self).clean()
-        if not self.instance.id:
-            secret = SecretKey(
-                mode=self.cleaned_data.get('mode'),
-                key=self.cleaned_data.get('key'),
-            )
+        key = self.cleaned_data.get('key')
+        mode = self.cleaned_data.get('mode')
+        if not self.instance.id and mode and mode & MODE_CRYPTOGRAPHY:
+            secret = SecretKey(mode=mode, key=key)
             try:
                 key = secret.get_key()
+                if not key:
+                    raise ValidationError({'key': _('This field is required.')})
             except TypeError:
-                raise ValidationError({'key': _('Invalid type')})
+                return self.cleaned_data
             self.cleaned_data['value'] = encrypt(key, self.cleaned_data.get('value'))
         return self.cleaned_data
 
