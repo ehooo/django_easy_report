@@ -1,6 +1,9 @@
 [run]
 command_line = manage.py test
 source = django_easy_report
+omit =
+    migrations/*
+    tests/*
 
 [report]
 skip_covered = True

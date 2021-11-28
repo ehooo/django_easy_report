@@ -188,14 +188,14 @@ class ReportSender(models.Model):
 
 class SecretReplace(models.Model):
     secret = models.ForeignKey(SecretKey, on_delete=models.CASCADE)
-    report = models.ForeignKey(ReportSender, on_delete=models.CASCADE)
+    sender = models.ForeignKey(ReportSender, on_delete=models.CASCADE)
     replace_word = models.SlugField(
         max_length=16,
         help_text=_('Word that will be replaced on "storage init params" field if is market as "${WORD}"')
     )
 
     class Meta:
-        unique_together = ('secret', 'report')
+        unique_together = ('secret', 'sender')
 
 
 class ReportGenerator(models.Model):
