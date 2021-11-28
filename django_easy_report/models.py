@@ -120,22 +120,24 @@ class SecretKey(models.Model):
         if self.mode & MODE_CRYPTOGRAPHY:
             try:
                 key = self.get_key()
-                if key is None:
+                if key is None:  # pragma: no cover
+                    # This never must happen
                     raise ValidationError({
-                        'key': _('Invalid value')
+                        'key': _('Invalid value.')
                     })
             except TypeError:
                 raise ValidationError({
                     'key': _('Invalid type.')
                 })
             try:
-                if self.get_secret() is None:
+                if self.get_secret() is None:  # pragma: no cover
+                    # This never must happen
                     raise ValidationError({
-                        'value': _('Invalid secret')
+                        'value': _('Invalid secret.')
                     })
             except InvalidToken:
                 raise ValidationError({
-                    'value': _('Invalid secret')
+                    'value': _('Invalid secret.')
                 })
 
 

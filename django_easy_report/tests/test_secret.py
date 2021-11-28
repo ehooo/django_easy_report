@@ -148,6 +148,18 @@ class SecretKeyModelTestCase(TestCase):
 
 class SecretKeyValidationTestCase(BaseValidationTestCase):
 
+    def test_invalid_mode(self):
+        secret = SecretKey(
+            name='Env secret',
+            value='NOT_EXISTS_ENV',
+        )
+
+        with self.assertRaises(ValidationError) as error_context:
+            secret.clean()
+
+        message = 'Invalid type.'
+        self.assertValidation(error_context, 'key', message)
+
     def test_invalid_environment(self):
         secret = SecretKey(
             mode=MODE_ENVIRONMENT,
@@ -270,6 +282,33 @@ class SecretKeyValidationTestCase(BaseValidationTestCase):
             secret.clean()
 
         message = 'Invalid type for setting "ARRAY_SETTING", only str is allowed.'
+        self.assertValidation(error_context, 'key', message)
+
+    @patch('django_easy_report.utils.Fernet')
+    def test_without_crypto_support(self, fernet_mock):
+        fernet_mock.__bool__.return_value = False
+        secret = SecretKey(
+            mode=MODE_CRYPTOGRAPHY,
+            name='Secret crypto',
+            key=''
+        )
+
+        with self.assertRaises(ValidationError) as error_context:
+            secret.clean()
+
+        message = 'Invalid secret.'
+        self.assertValidation(error_context, 'value', message)
+
+    def test_invalid_crypto_none_key(self):
+        secret = SecretKey(
+            mode=MODE_CRYPTOGRAPHY,
+            name='Secret crypto',
+        )
+
+        with self.assertRaises(ValidationError) as error_context:
+            secret.clean()
+
+        message = 'Invalid type.'
         self.assertValidation(error_context, 'key', message)
 
 
