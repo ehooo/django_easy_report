@@ -2,6 +2,7 @@ import os
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.core.files.storage import Storage
 from django.test import TestCase, override_settings
 
 from django_easy_report.choices import (
@@ -11,7 +12,7 @@ from django_easy_report.choices import (
     MODE_CRYPTOGRAPHY_ENVIRONMENT,
     MODE_CRYPTOGRAPHY_DJANGO,
 )
-from django_easy_report.models import SecretKey
+from django_easy_report.models import SecretKey, ReportSender, SecretReplace
 from django_easy_report.tests.test_models_validation import BaseValidationTestCase
 from django_easy_report import utils
 
@@ -131,6 +132,18 @@ class SecretKeyModelTestCase(TestCase):
             value='new secret',
         )
         self.assertEqual(secret.get_secret(), 'new secret')
+
+    @override_settings(WRONG_SETTING=['Wrong', 'value'])
+    def test_gen_crypto_django_settings_wrong_value(self):
+        with self.assertRaises(TypeError) as error_context:
+            SecretKey.objects.create_secret(
+                mode=MODE_CRYPTOGRAPHY_DJANGO,
+                name='Env secret',
+                value='new secret',
+                key='WRONG_SETTING',
+            )
+        message = 'Invalid key type "list" is not allowed, only str is valid'
+        self.assertEqual((message, ), error_context.exception.args)
 
 
 class SecretKeyValidationTestCase(BaseValidationTestCase):
@@ -303,25 +316,93 @@ class WithoutCryptoSupportTestCase(BaseValidationTestCase):
         self.assertEqual(message, error_context.exception.msg)
 
 
-class TestClass(object):
+class TestClassStorage(Storage):
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
 
 class ReplaceSecretTestCase(BaseValidationTestCase):
+
+    def setUp(self):
+        self.sender = ReportSender.objects.create(
+            name='local storage',
+            storage_class_name='django_easy_report.tests.test_secret.TestClassStorage',
+            storage_init_params='{"secret": $secret}'
+        )
+
     def test_create_class_with_replace(self):
         json_params = """{
             "direct": ${secret},
             "in_obj": {"key": ${secret}}
         }"""
         replace = {'secret': '\'$ECRET\\"'}
-        cls = utils.create_class('django_easy_report.tests.test_secret.TestClass', json_params, replace=replace)
+        cls = utils.create_class('django_easy_report.tests.test_secret.TestClassStorage', json_params, replace=replace)
         self.assertEqual(cls.kwargs.get('direct'), '\'$ECRET\\"')
         self.assertEqual(cls.kwargs.get('in_obj', {}).get('key'), '\'$ECRET\\"')
 
-    @override_settings(SECRET_KEY='django-insecure-h@er^@nmxpjxxv$(id7wfeo(1ca$0)2i+w3+ox0z391h%i84&1')
-    @override_settings(DJ_SETTING='Djang0_$3cRe7')
-    def test_model_with_secrets(self):
+    def assertSenderReplace(self, secret, plain_secret):
+        SecretReplace.objects.create(
+            secret=secret,
+            sender=self.sender,
+            replace_word='secret'
+        )
+        storage = self.sender.get_storage(True)
+        self.assertIn('secret', storage.kwargs)
+        self.assertEqual(plain_secret, storage.kwargs.get('secret'))
+
+    def test_env(self):
         os.environ.setdefault('SECRET_ENV', '3nv1R0nM3t_$3cRe7')
-        raise NotImplementedError()
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_ENVIRONMENT,
+            name='Env secret',
+            value='SECRET_ENV',
+        )
+        self.assertSenderReplace(secret, '3nv1R0nM3t_$3cRe7')
+
+    @override_settings(DJ_SETTING='Djang0_$3cRe7')
+    def test_django(self):
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_DJANGO_SETTINGS,
+            name='Env secret',
+            value='DJ_SETTING',
+        )
+        self.assertSenderReplace(secret, 'Djang0_$3cRe7')
+
+    def test_gen_crypto(self):
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_CRYPTOGRAPHY,
+            name='Env secret',
+            value='new secret',
+            key='$3cRe7_K3y',
+        )
+        self.assertSenderReplace(secret, 'new secret')
+
+    def test_gen_crypto_env(self):
+        os.environ.setdefault('SECRET_ENV', '3nv1R0nM3t_$3cRe7')
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_CRYPTOGRAPHY_ENVIRONMENT,
+            name='Env secret',
+            value='new secret',
+            key='SECRET_ENV',
+        )
+        self.assertSenderReplace(secret, 'new secret')
+
+    @override_settings(DJ_SETTING='Djang0_$3cRe7')
+    def test_gen_crypto_django(self):
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_CRYPTOGRAPHY_DJANGO,
+            name='Env secret',
+            value='new secret',
+            key='DJ_SETTING',
+        )
+        self.assertSenderReplace(secret, 'new secret')
+
+    @override_settings(SECRET_KEY='django-insecure-h@er^@nmxpjxxv$(id7wfeo(1ca$0)2i+w3+ox0z391h%i84&1')
+    def test_gen_crypto_django_settings(self):
+        secret = SecretKey.objects.create_secret(
+            mode=MODE_CRYPTOGRAPHY_DJANGO,
+            name='Env secret',
+            value='new secret',
+        )
+        self.assertSenderReplace(secret, 'new secret')

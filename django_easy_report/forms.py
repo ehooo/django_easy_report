@@ -35,6 +35,7 @@ class SecretKeyForm(forms.ModelForm):
             self.cleaned_data['value'] = encrypt(key, self.cleaned_data.get('value'))
         return self.cleaned_data
 
+
 class ReportSenderForm(forms.ModelForm):
     class Meta:
         model = ReportSender
