@@ -10,6 +10,11 @@ from django_easy_report.choices import MODE_CRYPTOGRAPHY
 from django_easy_report.models import ReportSender, SecretKey
 from django_easy_report.utils import create_class, import_class, encrypt
 
+try:
+    from cryptography.fernet import Fernet
+except ImportError:  # pragma: no cover
+    Fernet = None
+
 
 class SendEmailForm(forms.Form):
     send_to = forms.EmailField()
@@ -25,13 +30,15 @@ class SecretKeyForm(forms.ModelForm):
         key = self.cleaned_data.get('key')
         mode = self.cleaned_data.get('mode')
         if not self.instance.id and mode and mode & MODE_CRYPTOGRAPHY:
+            if not Fernet:
+                raise ValidationError({'mode': _('Not supported cryptography.')})
             secret = SecretKey(mode=mode, key=key)
             try:
                 key = secret.get_key()
+            except TypeError:
                 if not key:
                     raise ValidationError({'key': _('This field is required.')})
-            except TypeError:
-                return self.cleaned_data
+                raise ValidationError({'key': _('Invalid type.')})
             self.cleaned_data['value'] = encrypt(key, self.cleaned_data.get('value'))
         return self.cleaned_data
 
@@ -89,18 +96,16 @@ class ReportSenderForm(forms.ModelForm):
                 })
             elif 'storage_init_params' not in errors:
                 try:
-                    cls = create_class(storage_class_name,
-                                       self.cleaned_data.get('storage_init_params'),
-                                       replace=replace)
-                    if not isinstance(cls, Storage):
-                        raise ImportError('Only Storage classes are allowed')
+                    create_class(storage_class_name,
+                                 self.cleaned_data.get('storage_init_params'),
+                                 replace=replace)
                 except TypeError as type_error:
                     errors.update({
                         'storage_init_params': str(type_error)
                     })
                 except Exception as ex:
                     errors.update({
-                        'storage_init_params': _('Error creating storage class: "{}"').format(ex)
+                        'storage_init_params': _('Error creating storage class: "{}".').format(ex)
                     })
 
         except (ImportError, ValueError):
