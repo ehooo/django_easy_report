@@ -15,7 +15,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /code
 
-RUN apk update && apk add bash
+RUN apk update && apk add bash gcc musl-dev python3-dev libffi-dev openssl-dev cargo util-linux
 
 COPY --from=builder /dist/django-easy-report-*.tar.gz ./
 

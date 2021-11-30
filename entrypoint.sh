@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 if ! test -f "db.sqlite3"; then
   echo "Create migrations"
   python manage.py makemigrations

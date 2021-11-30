@@ -5,4 +5,6 @@ Werkzeug
 ipdb
 flake8
 
+celery
 django-celery-results
+cryptography

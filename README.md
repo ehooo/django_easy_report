@@ -65,6 +65,14 @@ docker run --publish=8000:8000 --name=django_easy_report_web django_easy_report:
 docker exec -ti django_easy_report_web bash
 ```
 
+* Run tests locally
+```shell
+docker build . --tag="django_easy_report:py38dj22" --build-arg PY_VERSION=3.8 --build-arg DJANGO_VERSION=2.2
+docker run --rm --entrypoint /usr/local/bin/python --name=test_django_easy_report_web django_easy_report:py38dj22 manage.py test
+```
+Note that in that case you need rebuild with any change in the code
+
+
 # License
 Copyright 2021 Victor Torre
 

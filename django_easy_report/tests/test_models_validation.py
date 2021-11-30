@@ -3,6 +3,7 @@ import json
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
+from django_easy_report.forms import ReportSenderForm
 from django_easy_report.models import ReportSender, ReportGenerator, ReportRequester, ReportQuery
 
 
@@ -18,65 +19,73 @@ class BaseValidationTestCase(TestCase):
 
 class ReportSenderValidationTestCase(BaseValidationTestCase):
     def test_storage_class_not_exist(self):
-        sender = ReportSender(
-            name='class NotExistFileSystemStorage not exist',
-            storage_class_name='django.core.files.storage.NotExistFileSystemStorage'
-        )
+        sender = ReportSenderForm(data={
+            'name': 'class NotExistFileSystemStorage not exist',
+            'storage_class_name': 'django.core.files.storage.NotExistFileSystemStorage'
+        })
 
-        with self.assertRaises(ValidationError) as error_context:
-            sender.clean()
+        self.assertFalse(sender.is_valid())
+        self.assertIn('storage_class_name', sender.errors)
+        error = sender.errors.get('storage_class_name')
+        self.assertEqual(len(error.data), 1)
 
         message = 'Class "django.core.files.storage.NotExistFileSystemStorage" cannot be imported'
-        self.assertValidation(error_context, 'storage_class_name', message)
+        self.assertEqual(error.data[0].message, message)
 
     def test_storage_class_module_not_exist(self):
-        sender = ReportSender(
-            name='storage_class_name not exists',
-            storage_class_name='module_not_exists.class_name'
-        )
+        sender = ReportSenderForm(data={
+            'name': 'storage_class_name not exists',
+            'storage_class_name': 'module_not_exists.class_name'
+        })
 
-        with self.assertRaises(ValidationError) as error_context:
-            sender.clean()
+        self.assertFalse(sender.is_valid())
+        self.assertIn('storage_class_name', sender.errors)
+        error = sender.errors.get('storage_class_name')
+        self.assertEqual(len(error.data), 1)
 
         message = 'Class "module_not_exists.class_name" cannot be imported'
-        self.assertValidation(error_context, 'storage_class_name', message)
+        self.assertEqual(error.data[0].message, message)
 
     def test_storage_class_wrong_class(self):
-        sender = ReportSender(
-            name='wrong storage_class_name class type',
-            storage_class_name='datetime.datetime'
-        )
+        sender = ReportSenderForm(data={
+            'name': 'wrong storage_class_name class type',
+            'storage_class_name': 'datetime.datetime'
+        })
 
-        with self.assertRaises(ValidationError) as error_context:
-            sender.clean()
+        self.assertFalse(sender.is_valid())
+        self.assertIn('storage_class_name', sender.errors)
+        error = sender.errors.get('storage_class_name')
+        self.assertEqual(len(error.data), 1)
 
         message = 'Invalid class "datetime.datetime", must be instance of Storage'
-        self.assertValidation(error_context, 'storage_class_name', message)
+        self.assertEqual(error.data[0].message, message)
 
     def test_init_params_wrong_json(self):
-        sender = ReportSender(
-            name='wrong json',
-            storage_class_name='django.core.files.storage.FileSystemStorage',
-            storage_init_params='no json'
-        )
+        sender = ReportSenderForm(data={
+            'name': 'wrong json',
+            'storage_class_name': 'django.core.files.storage.FileSystemStorage',
+            'storage_init_params': 'no json',
+        })
 
-        with self.assertRaises(ValidationError) as error_context:
-            sender.clean()
-
-        self.assertValidation(error_context, 'storage_init_params', 'Invalid JSON')
+        self.assertFalse(sender.is_valid())
+        self.assertIn('storage_init_params', sender.errors)
+        error = sender.errors.get('storage_init_params')
+        self.assertEqual(len(error.data), 1)
+        self.assertEqual(error.data[0].message, 'Invalid JSON')
 
     def test_init_params_wrong_params(self):
-        sender = ReportSender(
-            name='wrong init params',
-            storage_class_name='django.core.files.storage.FileSystemStorage',
-            storage_init_params='{"param_not_exist": null}'
-        )
+        sender = ReportSenderForm({
+            'name': 'wrong init params',
+            'storage_class_name': 'django.core.files.storage.FileSystemStorage',
+            'storage_init_params': '{"param_not_exist": null}'
+        })
 
-        with self.assertRaises(ValidationError) as error_context:
-            sender.clean()
-
+        self.assertFalse(sender.is_valid())
+        self.assertIn('storage_init_params', sender.errors)
+        error = sender.errors.get('storage_init_params')
+        self.assertEqual(len(error.data), 1)
         message = "__init__() got an unexpected keyword argument 'param_not_exist'"
-        self.assertValidation(error_context, 'storage_init_params', message)
+        self.assertEqual(error.data[0].message, message)
 
     def test_all_fine(self):
         sender = ReportSender(

@@ -4,8 +4,28 @@ from django_easy_report.models import (
     ReportSender,
     ReportGenerator,
     ReportQuery,
-    ReportRequester
+    ReportRequester, SecretKey, SecretReplace
 )
+from django_easy_report.forms import ReportSenderForm, SecretKeyForm
+
+
+@admin.register(SecretKey)
+class SecretKeyAdmin(admin.ModelAdmin):
+    search_fields = ('name', )
+    list_filter = ('mode', )
+    list_display = ('name', 'mode')
+    form = SecretKeyForm
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super(SecretKeyAdmin, self).get_readonly_fields(request, obj=obj)
+        if obj:
+            readonly_fields += ('mode', 'value', 'key', )
+        return readonly_fields
+
+
+class SecretReplaceInline(admin.TabularInline):
+    model = SecretReplace
+    extra = 1
 
 
 @admin.register(ReportSender)
@@ -26,6 +46,10 @@ class ReportSenderAdmin(admin.ModelAdmin):
             'fields': ('storage_class_name', 'storage_init_params'),
         }),
     )
+    inlines = [
+        SecretReplaceInline,
+    ]
+    form = ReportSenderForm
 
 
 @admin.register(ReportGenerator)
