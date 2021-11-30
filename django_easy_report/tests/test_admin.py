@@ -177,7 +177,7 @@ class ReportSenderAdminTestCase(AdminTestCase):
     def test_error_creating_storage_class(self):
         data = {
             'name': 'test storage',
-            'storage_class_name': 'tests.test_admin.TestClassStorage',
+            'storage_class_name': 'django_easy_report.tests.test_admin.TestClassStorage',
             'storage_init_params': json.dumps({'raise': True}),
             'size_to_attach': 0,
         }
@@ -188,7 +188,7 @@ class ReportSenderAdminTestCase(AdminTestCase):
     def test_replace_key(self):
         data = {
             'name': 'test storage',
-            'storage_class_name': 'tests.test_admin.TestClassStorage',
+            'storage_class_name': 'django_easy_report.tests.test_admin.TestClassStorage',
             'storage_init_params': '{"test": $secret}',
             'size_to_attach': 0,
             'secretreplace_set-TOTAL_FORMS': 1,
@@ -214,7 +214,7 @@ class ReportSenderAdminTestCase(AdminTestCase):
         )
         data = {
             'name': 'test storage',
-            'storage_class_name': 'tests.test_admin.TestClassStorage',
+            'storage_class_name': 'django_easy_report.tests.test_admin.TestClassStorage',
             'storage_init_params': '{"test": $secret}',
             'size_to_attach': 0,
             'secretreplace_set-TOTAL_FORMS': 2,
