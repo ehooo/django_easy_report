@@ -21,7 +21,7 @@ class AdminTestCase(TestCase):
     ADD_URL = None
 
     def setUp(self):
-        admin = User.objects.create_superuser(username='admin')
+        admin = User.objects.create_superuser('admin', 'admin@localhost', 'admin')
         self.client.force_login(admin)
         self.add_url = reverse(self.ADD_URL)
 
@@ -180,6 +180,10 @@ class ReportSenderAdminTestCase(AdminTestCase):
             'storage_class_name': 'django_easy_report.tests.test_admin.TestClassStorage',
             'storage_init_params': json.dumps({'raise': True}),
             'size_to_attach': 0,
+            'secretreplace_set-TOTAL_FORMS': 0,
+            'secretreplace_set-INITIAL_FORMS': 0,
+            'secretreplace_set-MIN_NUM_FORMS': 0,
+            'secretreplace_set-MAX_NUM_FORMS': 1000,
         }
         response = self.client.post(self.add_url, data=data)
         self.assertForm(response, 'storage_init_params',
