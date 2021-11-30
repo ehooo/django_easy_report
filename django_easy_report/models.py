@@ -189,7 +189,7 @@ class ReportSender(models.Model):
 
 
 class SecretReplace(models.Model):
-    secret = models.ForeignKey(SecretKey, on_delete=models.CASCADE)
+    secret = models.ForeignKey(SecretKey, on_delete=models.PROTECT)
     sender = models.ForeignKey(ReportSender, on_delete=models.CASCADE)
     replace_word = models.SlugField(
         max_length=16,
@@ -197,7 +197,7 @@ class SecretReplace(models.Model):
     )
 
     class Meta:
-        unique_together = ('secret', 'sender')
+        unique_together = (('secret', 'sender'), ('sender', 'replace_word'))
 
 
 class ReportGenerator(models.Model):
