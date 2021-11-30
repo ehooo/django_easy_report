@@ -7,10 +7,14 @@ from django.core.files.storage import Storage
 from django.forms.utils import ErrorList
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django_easy_report.models import SecretKey, ReportSender
 
-from choices import MODE_ENVIRONMENT, MODE_DJANGO_SETTINGS, MODE_CRYPTOGRAPHY, MODE_CRYPTOGRAPHY_ENVIRONMENT, \
-    MODE_CRYPTOGRAPHY_DJANGO
+from django_easy_report.choices import (
+    MODE_ENVIRONMENT,
+    MODE_DJANGO_SETTINGS,
+    MODE_CRYPTOGRAPHY,
+    MODE_CRYPTOGRAPHY_ENVIRONMENT,
+    MODE_CRYPTOGRAPHY_DJANGO)
+from django_easy_report.models import SecretKey, ReportSender
 
 
 class AdminTestCase(TestCase):

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="django-easy-report",
-    version="0.0.2",
+    version="0.1.0",
     author="Victor Torre",
     author_email="web.ehooo@gmail.com",
     description="Django app for report generation",
