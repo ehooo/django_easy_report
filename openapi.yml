@@ -61,7 +61,7 @@ paths:
                $ref: '#/components/schemas/ErrorMessage'
 
         '200':
-          description: similar report found with status
+          description: 'similar report found with status'
           content:
             application/json:
               schema:
@@ -78,13 +78,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationAccepted'
-
       requestBody:
         content:
           application/x-www-form-urlencoded:
             schema:
-              type: string
+              type: object
         description: Report data, each report will need different information
+
+  /{report_name}/{query_pk}:
+    get:
+      tags:
+        - donwloader
+      summary: Download report.
+      operationId: download
+      description: Download report.
+      parameters:
+        - in: path
+          name: report_name
+          description: Report path
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: query_pk
+          description: Id of the report that you want download.
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '403':
+          description: 'permissions required for download that report'
+        '404':
+          description: 'report, query or file not found'
+        '302':
+          description: 'Redirect to report'
+        '200':
+          description: 'Report'
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
 
 components:
   schemas:
@@ -151,4 +186,4 @@ components:
         accepted:
           type: integer
           example: 1
-          description: Notification Id
+          description: report query Id
