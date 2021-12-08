@@ -89,7 +89,11 @@ class SecretKey(models.Model):
             raise ValidationError({'key': _('Key only valid for cryptography mode.')})
         if not Fernet and self.mode & MODE_CRYPTOGRAPHY:
             raise ValidationError({'mode': _('Invalid mode, cryptography not supported.')})
+        self._clean_environment()
+        self._clean_django_settings()
+        self._clean_cryptography()
 
+    def _clean_environment(self):
         if self.mode & MODE_ENVIRONMENT:
             field = 'value'
             env = self.value
@@ -101,7 +105,8 @@ class SecretKey(models.Model):
             if not env or env not in os.environ:
                 raise ValidationError({field: _('Environment "{}" not found.').format(env)})
 
-        elif self.mode & MODE_DJANGO_SETTINGS:
+    def _clean_django_settings(self):
+        if self.mode & MODE_DJANGO_SETTINGS:
             if self.mode & MODE_CRYPTOGRAPHY:
                 if self.key:
                     if not hasattr(settings, self.key):
@@ -117,6 +122,7 @@ class SecretKey(models.Model):
                     'value': _('Invalid type for setting "{}", only str is allowed.').format(self.value)
                 })
 
+    def _clean_cryptography(self):
         if self.mode & MODE_CRYPTOGRAPHY:
             try:
                 key = self.get_key()
