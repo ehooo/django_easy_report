@@ -51,6 +51,33 @@ urlpatterns = [
 3. Create `Report Generator` on Admin page.
 4. Use you report endpoint defined on Admin page.
 
+## Using Secrets
+In order to protect your secrets you could use the `SecretKey` Model.
+That allows you use 
+[`django settings`](https://docs.djangoproject.com/en/3.2/topics/settings/),
+[`environment`](https://docs.python.org/3/library/os.html#os.environ) or
+[`cryptography`](https://pypi.org/project/cryptography/) to protect your secrets.
+
+When you use that secrets you must create the model, on the Admin page.
+The information that you enter must be on plain text.
+The `key` field is only required when crypto is using.
+
+Then you must create or edit a `ReportSender` model, adding on the key that you want to use.
+The `replace word` will be used on the `Storage init params` field to replace with the value of the secret in plain text.
+That allow you to replace the value of `Storage init params` from:
+```json
+{
+  "my_secret": "Insecure secret"
+}
+```
+to
+```json
+{
+  "my_secret": $my_replace_word
+}
+```
+
+
 ## API workflow
 See doc as [OpenAPI format](./openapi.yml) or in [swagger](https://app.swaggerhub.com/apis-docs/ehooo/django_easy_report/1.0.0)
 
