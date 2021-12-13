@@ -4,9 +4,15 @@ from django_easy_report.models import (
     ReportSender,
     ReportGenerator,
     ReportQuery,
-    ReportRequester, SecretKey, SecretReplace
+    ReportRequester,
+    SecretKey,
+    SecretReplace,
 )
-from django_easy_report.forms import ReportSenderForm, SecretKeyForm
+from django_easy_report.forms import (
+    ReportSenderForm,
+    ReportGeneratorForm,
+    SecretKeyForm,
+)
 
 
 @admin.register(SecretKey)
@@ -61,6 +67,7 @@ class ReportGeneratorAdmin(admin.ModelAdmin):
         'preserve_report',
     )
     list_display = ('name', 'class_name', 'sender')
+    form = ReportGeneratorForm
 
 
 @admin.register(ReportQuery)
