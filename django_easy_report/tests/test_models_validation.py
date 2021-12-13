@@ -1,7 +1,7 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from django_easy_report.forms import ReportSenderForm
 from django_easy_report.models import ReportSender, ReportGenerator, ReportRequester, ReportQuery
@@ -87,17 +87,39 @@ class ReportSenderValidationTestCase(BaseValidationTestCase):
         message = "__init__() got an unexpected keyword argument 'param_not_exist'"
         self.assertEqual(error.data[0].message, message)
 
-    def test_all_fine(self):
-        sender = ReportSender(
+    @staticmethod
+    def get_fs_sender():
+        return ReportSender(
             name='local storage',
             storage_class_name='django.core.files.storage.FileSystemStorage',
             storage_init_params='{"location": "test"}',
             email_from='test@localhost'
         )
+
+    def test_all_fine(self):
+        sender = self.get_fs_sender()
         try:
             sender.clean()
         except Exception as ex:  # pragma: no cover
             self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(SENDER_CLASSES=[
+        'django.core.files.storage.FileSystemStorage',
+    ])
+    def test_fine_class_filter_settings(self):
+        sender = self.get_fs_sender()
+        try:
+            sender.clean()
+        except Exception as ex:  # pragma: no cover
+            self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(SENDER_CLASSES=[])
+    def test_wrong_class_filter_settings(self):
+        sender = self.get_fs_sender()
+        with self.assertRaises(ValidationError) as error_context:
+            sender.clean()
+        message = 'Invalid class "django.core.files.storage.FileSystemStorage" must be added on SENDER_CLASSES'
+        self.assertValidation(error_context, 'storage_class_name', message)
 
 
 class ReportGeneratorValidationTestCase(BaseValidationTestCase):
@@ -237,8 +259,9 @@ class ReportGeneratorValidationTestCase(BaseValidationTestCase):
         message = 'Invalid permission: "auth.user.view_user"'
         self.assertValidation(error_context, 'permissions', message)
 
-    def test_all_fine(self):
-        report = ReportGenerator(
+    @staticmethod
+    def get_good_report():
+        return ReportGenerator(
             name='Good report',
             class_name='django_easy_report.reports.ReportModelGenerator',
             init_params=json.dumps({
@@ -247,10 +270,31 @@ class ReportGeneratorValidationTestCase(BaseValidationTestCase):
             }),
             permissions='auth.view_user'
         )
+
+    def test_all_fine(self):
+        report = self.get_good_report()
         try:
             report.clean()
         except Exception as ex:  # pragma: no cover
             self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(REPORT_CLASSES=[
+        'django_easy_report.reports.ReportModelGenerator',
+    ])
+    def test_fine_class_filter_settings(self):
+        report = self.get_good_report()
+        try:
+            report.clean()
+        except Exception as ex:  # pragma: no cover
+            self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(REPORT_CLASSES=[])
+    def test_wrong_class_filter_settings(self):
+        report = self.get_good_report()
+        with self.assertRaises(ValidationError) as error_context:
+            report.clean()
+        message = 'Invalid class "django_easy_report.reports.ReportModelGenerator" must be added on REPORT_CLASSES'
+        self.assertValidation(error_context, 'class_name', message)
 
 
 class ReportQueryValidationTestCase(BaseValidationTestCase):

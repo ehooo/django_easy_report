@@ -2,12 +2,17 @@ import json
 import string
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.storage import Storage
 from django.utils.translation import gettext as _
 
 from django_easy_report.choices import MODE_CRYPTOGRAPHY
-from django_easy_report.models import ReportSender, SecretKey
+from django_easy_report.models import (
+    ReportSender,
+    ReportGenerator,
+    SecretKey,
+)
 from django_easy_report.utils import create_class, import_class, encrypt
 
 try:
@@ -47,6 +52,10 @@ class ReportSenderForm(forms.ModelForm):
     class Meta:
         model = ReportSender
         fields = '__all__'
+        if hasattr(settings, 'SENDER_CLASSES'):
+            widgets = {
+                'storage_class_name': forms.Select(choices=[(c, c)for c in settings.SENDER_CLASSES]),
+            }
 
     def clean(self):
         errors = {}
@@ -117,3 +126,13 @@ class ReportSenderForm(forms.ModelForm):
 
         if errors:
             raise ValidationError(errors)
+
+
+class ReportGeneratorForm(forms.ModelForm):
+    class Meta:
+        model = ReportGenerator
+        fields = '__all__'
+        if hasattr(settings, 'REPORT_CLASSES'):
+            widgets = {
+                'class_name': forms.Select(choices=[(c, c)for c in settings.REPORT_CLASSES]),
+            }

@@ -193,6 +193,19 @@ class ReportSender(models.Model):
             self.__storage = cls
         return self.__storage
 
+    def clean(self):
+        super(ReportSender, self).clean()
+        if (
+            hasattr(settings, 'SENDER_CLASSES') and
+            isinstance(settings.SENDER_CLASSES, (list, tuple)) and
+            self.storage_class_name not in settings.SENDER_CLASSES
+        ):
+            raise ValidationError({
+                'storage_class_name': _('Invalid class "{}" must be added on SENDER_CLASSES').format(
+                    self.storage_class_name
+                )
+            })
+
 
 class SecretReplace(models.Model):
     secret = models.ForeignKey(SecretKey, on_delete=models.PROTECT)
@@ -311,6 +324,17 @@ class ReportGenerator(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+        if (
+            hasattr(settings, 'REPORT_CLASSES') and
+            isinstance(settings.REPORT_CLASSES, (list, tuple)) and
+            self.class_name not in settings.REPORT_CLASSES
+        ):
+            raise ValidationError({
+                'class_name': _('Invalid class "{}" must be added on REPORT_CLASSES').format(
+                    self.class_name
+                )
+            })
 
     def get_permissions(self):
         permissions = set()

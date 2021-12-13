@@ -12,6 +12,7 @@ Implments the following functions:
 [`django settings`](https://docs.djangoproject.com/en/3.2/topics/settings/),
 [`environment`](https://docs.python.org/3/library/os.html#os.environ) or
 [`cryptography`](https://pypi.org/project/cryptography/).
+* Allows filter for storages and report classes.
 
 # SetUp
 * Install package:
@@ -37,6 +38,24 @@ urlpatterns = [
 ]
 ```
 * Configure [celery](https://docs.celeryproject.org/en/stable/django/first-steps-with-django.html)
+
+## Protect import dynamic classes
+In order to block insecure classes on `ReportSender` and `ReportGenerator` models,
+is allowed to define the on `settings.py` the setting `SENDER_CLASSES` and/or `REPORT_CLASSES`:
+```python
+# ...
+SENDER_CLASSES = [
+    'django.core.files.storage.FileSystemStorage',
+]
+
+REPORT_CLASSES = [
+    'django_easy_report.reports.ReportModelGenerator',
+]
+# ...
+```
+That values will only be checked when model is saved,
+that means that you could add invalid classes on the settings,
+but it will not be when the class is used.
 
 # Howto
 1. Create your code ([see example](./django_easy_report/tests/test_example.py)).
