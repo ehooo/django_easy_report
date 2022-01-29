@@ -1,7 +1,9 @@
 import json
 import os
+from gettext import gettext
 from unittest.mock import patch
 
+from django.contrib.admin import helpers
 from django.contrib.auth.models import User
 from django.core.files.storage import Storage
 from django.forms.utils import ErrorList
@@ -13,8 +15,14 @@ from django_easy_report.choices import (
     MODE_DJANGO_SETTINGS,
     MODE_CRYPTOGRAPHY,
     MODE_CRYPTOGRAPHY_ENVIRONMENT,
-    MODE_CRYPTOGRAPHY_DJANGO)
-from django_easy_report.models import SecretKey, ReportSender
+    MODE_CRYPTOGRAPHY_DJANGO
+)
+from django_easy_report.models import (
+    SecretKey,
+    ReportSender,
+    ReportGenerator,
+    ReportQuery
+)
 
 
 class AdminTestCase(TestCase):
@@ -233,3 +241,75 @@ class ReportSenderAdminTestCase(AdminTestCase):
         response = self.client.post(self.add_url, data=data)
         self.assertResponseError(response, 'Please correct the duplicate data for replace_word.')
         self.assertResponseError(response, 'Please correct the duplicate values below.')
+
+
+class AdminActionTestCase(AdminTestCase):
+    fixtures = ['basic_data.json']
+    ADD_URL = 'admin:django_easy_report_reportgenerator_changelist'
+
+    def make_report(self):
+        data = {
+            'action': 'generate_report',
+            'select_across': '1',
+            'index': '0',
+            helpers.ACTION_CHECKBOX_NAME: ['1']
+        }
+
+        return self.client.post(self.add_url, data)
+
+    @patch('django_easy_report.actions.generate_report_task')
+    def test_no_report(self, mock_generate_report_task):
+        response = self.make_report()
+        self.assertFalse(mock_generate_report_task.delay.called)
+        self.assertEqual(
+            response.wsgi_request._messages._queued_messages[0].message,
+            gettext('Admin report (django_easy_report.reports.AdminReportGenerator) not found.')
+        )
+
+    @patch('django_easy_report.actions.generate_report_task')
+    def test_many_reports(self, mock_generate_report_task):
+        sender = ReportSender.objects.get()
+        ReportGenerator.objects.create(
+            name='admin_report',
+            class_name='django_easy_report.reports.AdminReportGenerator',
+            init_params=json.dumps({}),
+            sender=sender
+        )
+        ReportGenerator.objects.create(
+            name='admin_report_not_send',
+            class_name='django_easy_report.reports.AdminReportGenerator',
+            init_params=json.dumps({'send_email': False}),
+            sender=sender
+        )
+        response = self.make_report()
+        self.assertFalse(mock_generate_report_task.delay.called)
+        self.assertEqual(
+            response.wsgi_request._messages._queued_messages[0].message,
+            gettext('Detected more than one admin report.')
+        )
+
+    @patch('django_easy_report.actions.generate_report_task')
+    def test_run_report(self, mock_generate_report_task):
+        sender = ReportSender.objects.get()
+        ReportGenerator.objects.create(
+            name='admin_report',
+            class_name='django_easy_report.reports.AdminReportGenerator',
+            init_params=json.dumps({}),
+            sender=sender
+        )
+        response = self.make_report()
+        self.assertTrue(mock_generate_report_task.delay.called)
+        self.assertEqual(ReportQuery.objects.count(), 1)
+        query = ReportQuery.objects.get()
+        self.assertEqual(
+            response.wsgi_request._messages._queued_messages[0].message,
+            gettext('Report queued ({}).').format(query.pk)
+        )
+        args_list = mock_generate_report_task.delay.call_args_list
+        self.assertTrue(args_list[0], query.pk)
+        params = json.loads(query.params)
+        for key in ['sql', 'fields', 'admin_class', 'model_class']:
+            self.assertIn(key, params.keys())
+        self.assertEqual(params['fields'], ['name', 'class_name', 'sender', 'params_keys'])
+        self.assertEqual(params['admin_class'], 'django_easy_report.admin.ReportGeneratorAdmin')
+        self.assertEqual(params['model_class'], 'django_easy_report.models.ReportGenerator')

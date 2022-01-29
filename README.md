@@ -97,6 +97,15 @@ to
 ```
 
 
+## Using Admin Action
+In order to allow generate reports based on admin page,
+there is an action localed on `django_easy_report.actions.generate_report`.
+You could see an example on: [test_web/custom/admin.py](./test_web/custom/admin.py)
+
+To allows the generation flow on the standard flow you must
+create `Report Generator` on Admin page using the class `django_easy_report.reports.AdminReportGenerator`.
+In order to work you could only have one report using that class.
+
 ## API workflow
 See doc as [OpenAPI format](./openapi.yml) or in [swagger](https://app.swaggerhub.com/apis-docs/ehooo/django_easy_report/1.0.0)
 

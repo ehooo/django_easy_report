@@ -1,5 +1,8 @@
+import json
+
 from django.contrib import admin
 
+from django_easy_report.actions import generate_report
 from django_easy_report.models import (
     ReportSender,
     ReportGenerator,
@@ -21,6 +24,7 @@ class SecretKeyAdmin(admin.ModelAdmin):
     list_filter = ('mode', )
     list_display = ('name', 'mode')
     form = SecretKeyForm
+    actions = [generate_report]
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super(SecretKeyAdmin, self).get_readonly_fields(request, obj=obj)
@@ -56,6 +60,7 @@ class ReportSenderAdmin(admin.ModelAdmin):
         SecretReplaceInline,
     ]
     form = ReportSenderForm
+    actions = [generate_report]
 
 
 @admin.register(ReportGenerator)
@@ -66,13 +71,20 @@ class ReportGeneratorAdmin(admin.ModelAdmin):
         'always_download',
         'preserve_report',
     )
-    list_display = ('name', 'class_name', 'sender')
+    list_display = ('name', 'class_name', 'sender', 'params_keys')
+
+    def params_keys(self, obj):
+        return ", ".join(json.loads(obj.init_params).keys())
+    params_keys.short_description = 'params'
+
     form = ReportGeneratorForm
+    actions = [generate_report]
 
 
 @admin.register(ReportQuery)
 class ReportQueryAdmin(admin.ModelAdmin):
     list_display = ('status', 'report')
+    actions = [generate_report]
 
     def has_add_permission(self, request):  # pragma: no cover
         return False
@@ -84,6 +96,7 @@ class ReportQueryAdmin(admin.ModelAdmin):
 @admin.register(ReportRequester)
 class ReportRequesterAdmin(admin.ModelAdmin):
     list_display = ('user', 'query')
+    actions = [generate_report]
 
     def has_add_permission(self, request):  # pragma: no cover
         return False

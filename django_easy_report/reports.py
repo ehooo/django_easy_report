@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.forms.utils import ErrorDict
 
 from django_easy_report.constants import STATUS_DONE, STATUS_ERROR, STATUS_OPTIONS
+from django_easy_report.exceptions import DoNotSend
 from django_easy_report.utils import import_class
 
 
@@ -213,3 +214,71 @@ class ReportModelGenerator(ReportBaseGenerator):
         for header in self.fields:
             row[header] = getattr(obj, header, default)
         return row
+
+
+class AdminReportGenerator(ReportBaseGenerator):
+    def __init__(self, **kwargs):
+        super(AdminReportGenerator, self).__init__(**kwargs)
+        self.fields = []
+        self.admin_class = None
+        self.model_class = None
+        self.sql = None
+        self.using = kwargs.get('using', None)
+        self.send_email = kwargs.get('send_email', True)
+
+    def get_filename(self):
+        utc_now = datetime.datetime.utcnow()
+        return "{}_{}.csv".format(
+            self.admin_class.__name__, utc_now.strftime('%Y%m%d-%M%S')
+        )
+
+    def reset(self):
+        super(AdminReportGenerator, self).reset()
+        self.buffer = StringIO()
+
+    def validate(self, data):
+        return {'__all__': ValidationError(_('This report is only valid for Admin page'))}
+
+    def get_message(self, *args, **kwargs):
+        if self.send_email:
+            return super(AdminReportGenerator, self).get_message(*args, **kwargs)
+        raise DoNotSend()
+
+    def setup(self, report_model, **kwargs):
+        self.setup_params = kwargs
+        self.report_model = report_model
+        self.fields = kwargs.get('fields', [])
+        self.sql = kwargs.get('sql', '')
+        admin_class = kwargs.get('admin_class')
+        try:
+            self.admin_class = import_class(admin_class)
+        except ValueError:
+            raise ImportError('Cannot import admin "{}"'.format(admin_class))
+        model_class = kwargs.get('model_class')
+        try:
+            self.model_class = import_class(model_class)
+        except ValueError:
+            raise ImportError('Cannot import model "{}"'.format(model_class))
+
+    def get_queryset(self):
+        qs = self.model_class.objects.raw(self.sql)
+        if self.using:
+            qs = qs.using(self.using)
+        return qs
+
+    def get_row(self, item):
+        row = {}
+        for field in self.fields:
+            if hasattr(item, field):
+                row[field] = getattr(item, field)
+            else:
+                function = getattr(self.admin_class, field)
+                row[field] = function(None, item)
+        return row
+
+    def generate(self):
+        reader = DictWriter(self.buffer, self.fields)
+        reader.writeheader()
+        for item in self.get_queryset():
+            row = self.get_row(item)
+            reader.writerow(row)
