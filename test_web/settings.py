@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'django_celery_results',
     'django_easy_report',
+    'test_web.custom',
 ]
 
 if django.__version__.startswith('2.'):
