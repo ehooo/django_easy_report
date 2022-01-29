@@ -73,9 +73,9 @@ class ReportGeneratorAdmin(admin.ModelAdmin):
     )
     list_display = ('name', 'class_name', 'sender', 'params_keys')
 
-    @admin.display(description='params')
     def params_keys(self, obj):
         return ", ".join(json.loads(obj.init_params).keys())
+    params_keys.short_description = 'params'
 
     form = ReportGeneratorForm
     actions = [generate_report]
