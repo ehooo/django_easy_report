@@ -13,6 +13,7 @@ Implments the following functions:
 [`environment`](https://docs.python.org/3/library/os.html#os.environ) or
 [`cryptography`](https://pypi.org/project/cryptography/).
 * Allows filter for storages and report classes.
+* Action that allows generate report from Admin page.
 
 # SetUp
 * Install package:
@@ -50,12 +51,13 @@ SENDER_CLASSES = [
 
 REPORT_CLASSES = [
     'django_easy_report.reports.ReportModelGenerator',
+    'django_easy_report.reports.AdminReportGenerator',
 ]
 # ...
 ```
-That values will only be checked when model is saved,
-that means that you could add invalid classes on the settings,
-but it will not be when the class is used.
+That values will be checked when model is saved and loaded,
+that means that you will not able to use the reports
+who have classes not listed on the proper setting.
 
 # Howto
 1. Create your code ([see example](./django_easy_report/tests/test_example.py)).

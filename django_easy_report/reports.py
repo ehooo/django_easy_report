@@ -53,16 +53,29 @@ class ReportBaseGenerator(object):
     def get_email(self, requester):
         """
         :type requester: django_easy_report.models.ReportRequester
-        :return:
+        :return: email from requester
+        :rtype: str
         """
         return getattr(requester.user, requester.user.get_email_field_name())
 
     def get_form(self, data):
+        """
+        :param data: data used on from_class call
+        :type data: dict
+        :return: None or Form instance
+        :rtype: None|django.forms.Form
+        """
         if not self.form and self.form_class:
             self.form = self.form_class(data)
         return self.form
 
     def validate(self, data):
+        """
+        :param data: data used to use on form
+        :type data: dict
+        :return: None or form.errors
+        :rtype: None|dict
+        """
         form = self.get_form(data)
         if form and not form.is_valid():
             return form.errors
@@ -72,19 +85,32 @@ class ReportBaseGenerator(object):
         :param data:
         :type data: dict
         :return: user_params, report_params
+        :rtype: (dict, dict)
         """
         return {}, data
 
     def get_filename(self):  # pragma: no cover
+        """
+        :return: string with filename
+        :rtype: str
+        """
         raise NotImplementedError()
 
     def get_mimetype(self):
+        """
+        :return: string with mimetype
+        :rtype: str
+        """
         return self.mimetype
 
     def generate(self):  # pragma: no cover
         raise NotImplementedError()
 
     def get_remote_path(self):
+        """
+        :return: path used on remote storage
+        :rtype: str
+        """
         path_parts = [
             self.report_model.report.name,
             self.report_model.params_hash,
@@ -94,6 +120,11 @@ class ReportBaseGenerator(object):
         return os.path.join(*path_parts)
 
     def save(self):
+        """
+        Save buffer on remote storage
+        :return: path saved on remote storage
+        :rtype: str
+        """
         self.buffer.seek(0)
         filepath = self.get_remote_path()
         storage = self.report_model.report.sender.get_storage()
@@ -101,9 +132,27 @@ class ReportBaseGenerator(object):
         return name
 
     def get_subject(self, requester):
+        """
+        :param requester: requester
+        :type requester: django_easy_report.models.ReportRequester
+        :return: Subject for email
+        :rtype: str
+        """
         return '{}'.format(self.__class__.__name__)
 
     def get_message(self, report_status, requester, attachment=None, link=None):
+        """
+        :param report_status: item on the list: django_easy_report.constants.STATUS_OPTIONS
+        :type report_status: int
+        :param requester:
+        :type requester: django_easy_report.models.ReportRequester
+        :param attachment: If the message have attachment file
+        :type attachment: bool
+        :param link: The link point to remote file
+        :type link: str
+        :return: Message body
+        :rtype: str
+        """
         if report_status == STATUS_DONE:
             return self.get_done_message(requester, attachment, link)
         elif report_status == STATUS_ERROR:
@@ -115,9 +164,23 @@ class ReportBaseGenerator(object):
         return _('Invalid status ({})').format(status)
 
     def get_error_message(self):
+        """
+        :return: Message used when error happen
+        :rtype: str
+        """
         return _('Something was wrong')
 
     def get_done_message(self, requester=None, attachment=None, url=None):
+        """
+        :param requester:
+        :type requester: django_easy_report.models.ReportRequester
+        :param attachment: If the message have attachment file
+        :type attachment: bool
+        :param link: The link point to remote file
+        :type link: str
+        :return: Message body
+        :rtype: str
+        """
         msg = _('Report completed.')
         if attachment:
             return _('{msg} See attachments').format(msg=msg)
