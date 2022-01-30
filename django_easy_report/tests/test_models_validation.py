@@ -121,6 +121,24 @@ class ReportSenderValidationTestCase(BaseValidationTestCase):
         message = 'Invalid class "django.core.files.storage.FileSystemStorage" must be added on SENDER_CLASSES'
         self.assertValidation(error_context, 'storage_class_name', message)
 
+    @override_settings(SENDER_CLASSES=[
+        'django.core.files.storage.FileSystemStorage',
+    ])
+    def test_get_storage_fine_class_filter_settings(self):
+        sender = self.get_fs_sender()
+        try:
+            sender.get_storage()
+        except Exception as ex:  # pragma: no cover
+            self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(SENDER_CLASSES=[])
+    def test_get_storage_wrong_class_filter_settings(self):
+        sender = self.get_fs_sender()
+        with self.assertRaises(ImportError) as error_context:
+            sender.get_storage()
+        message = 'Storage class are not on the SENDER_CLASSES list'
+        self.assertEqual(error_context.exception.msg, message)
+
 
 class ReportGeneratorValidationTestCase(BaseValidationTestCase):
 
@@ -295,6 +313,24 @@ class ReportGeneratorValidationTestCase(BaseValidationTestCase):
             report.clean()
         message = 'Invalid class "django_easy_report.reports.ReportModelGenerator" must be added on REPORT_CLASSES'
         self.assertValidation(error_context, 'class_name', message)
+
+    @override_settings(REPORT_CLASSES=[
+        'django_easy_report.reports.ReportModelGenerator',
+    ])
+    def test_load_fine_class_filter_settings(self):
+        report = self.get_good_report()
+        try:
+            report.get_report()
+        except Exception as ex:  # pragma: no cover
+            self.fail('Unexpected exception {}'.format(ex))
+
+    @override_settings(REPORT_CLASSES=[])
+    def test_load_wrong_class_filter_settings(self):
+        report = self.get_good_report()
+        with self.assertRaises(ImportError) as error_context:
+            report.get_report()
+        message = 'ReportBaseGenerator class are not on the REPORT_CLASSES list'
+        self.assertEqual(error_context.exception.msg, message)
 
 
 class ReportQueryValidationTestCase(BaseValidationTestCase):
