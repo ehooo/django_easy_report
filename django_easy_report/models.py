@@ -187,6 +187,12 @@ class ReportSender(models.Model):
             replace = {}
             for replace_item in self.secretreplace_set.all():
                 replace[replace_item.replace_word] = replace_item.secret.get_secret()
+            if (
+                hasattr(settings, 'SENDER_CLASSES') and
+                isinstance(settings.SENDER_CLASSES, (list, tuple)) and
+                self.storage_class_name not in settings.SENDER_CLASSES
+            ):
+                raise ImportError('Storage class are not on the SENDER_CLASSES list')
             cls = create_class(self.storage_class_name, self.storage_init_params, replace=replace)
             if not isinstance(cls, Storage):
                 raise ImportError('Only Storage classes are allowed')
@@ -266,6 +272,17 @@ class ReportGenerator(models.Model):
     def clean(self):
         super(ReportGenerator, self).clean()
 
+        if (
+            hasattr(settings, 'REPORT_CLASSES') and
+            isinstance(settings.REPORT_CLASSES, (list, tuple)) and
+            self.class_name not in settings.REPORT_CLASSES
+        ):
+            raise ValidationError({
+                'class_name': _('Invalid class "{}" must be added on REPORT_CLASSES').format(
+                    self.class_name
+                )
+            })
+
         errors = {}
         if self.init_params:
             try:
@@ -325,17 +342,6 @@ class ReportGenerator(models.Model):
         if errors:
             raise ValidationError(errors)
 
-        if (
-            hasattr(settings, 'REPORT_CLASSES') and
-            isinstance(settings.REPORT_CLASSES, (list, tuple)) and
-            self.class_name not in settings.REPORT_CLASSES
-        ):
-            raise ValidationError({
-                'class_name': _('Invalid class "{}" must be added on REPORT_CLASSES').format(
-                    self.class_name
-                )
-            })
-
     def get_permissions(self):
         permissions = set()
         if self.permissions:
@@ -344,6 +350,12 @@ class ReportGenerator(models.Model):
 
     def get_report(self, force=False):
         if self.__report is None or force:
+            if (
+                hasattr(settings, 'REPORT_CLASSES') and
+                isinstance(settings.REPORT_CLASSES, (list, tuple)) and
+                self.class_name not in settings.REPORT_CLASSES
+            ):
+                raise ImportError('ReportBaseGenerator class are not on the REPORT_CLASSES list')
             cls = create_class(self.class_name, self.init_params)
             if not isinstance(cls, ReportBaseGenerator):
                 raise ImportError('Only ReportBaseGenerator classes are allowed')
