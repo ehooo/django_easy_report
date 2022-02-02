@@ -1,6 +1,8 @@
 import json
 import os
 from gettext import gettext
+from glob import glob
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.admin import helpers
@@ -254,7 +256,6 @@ class AdminActionTestCase(AdminTestCase):
             'index': '0',
             helpers.ACTION_CHECKBOX_NAME: ['1']
         }
-
         return self.client.post(self.add_url, data)
 
     @patch('django_easy_report.actions.generate_report_task')
@@ -313,3 +314,34 @@ class AdminActionTestCase(AdminTestCase):
         self.assertEqual(params['fields'], ['name', 'class_name', 'sender', 'params_keys'])
         self.assertEqual(params['admin_class'], 'django_easy_report.admin.ReportGeneratorAdmin')
         self.assertEqual(params['model_class'], 'django_easy_report.models.ReportGenerator')
+
+    def test_generate_report(self):
+        with TemporaryDirectory() as tmp_dirname:
+            sender = ReportSender.objects.get()
+            storage_init_params = json.loads(sender.storage_init_params)
+            storage_init_params['location'] = tmp_dirname
+            sender.storage_init_params = json.dumps(storage_init_params)
+            sender.save()
+            ReportGenerator.objects.create(
+                name='admin_report',
+                class_name='django_easy_report.reports.AdminReportGenerator',
+                init_params=json.dumps({}),
+                sender=sender
+            )
+            response = self.make_report()
+            self.assertEqual(ReportQuery.objects.count(), 1)
+            query = ReportQuery.objects.get()
+            self.assertEqual(
+                response.wsgi_request._messages._queued_messages[0].message,
+                gettext('Report queued ({}).').format(query.pk)
+            )
+            self.assertEqual(query.status, 20)
+            report_list = list(glob('{}/admin_report/*/*'.format(tmp_dirname)))
+            self.assertEqual(len(report_list), 1)
+            report = report_list[0]
+            with open(report, 'r') as f:
+                content = f.read()
+            self.assertNotEqual(len(content), 0)
+            lines = [line for line in content.split('\n') if line]
+            self.assertEqual(lines[0], 'name,class_name,sender,params_keys')
+            self.assertEqual(len(lines), ReportGenerator.objects.count() + 1)
