@@ -62,8 +62,8 @@ class MyReportGenerator(ReportBaseGenerator):
             return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         return self.mimetype
 
-    def generate(self):
-        self.buffer.write(b'Your report data')
+    def generate(self, buffer, tmp_dir):
+        buffer.write(b'Your report data')
         # ...
 
     def get_message(self, report_status, requester, attachment=None, link=None):
