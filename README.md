@@ -16,7 +16,7 @@ Implments the following functions:
 * Action that allows generate report from Admin page.
 
 # SetUp
-* Install package:
+* Install package from [pypi](https://pypi.org/project/django-easy-report/):
 ```shell
 pip install django-easy-report
 ```
@@ -63,10 +63,10 @@ who have classes not listed on the proper setting.
 1. Create your code ([see example](./django_easy_report/tests/test_example.py)).
     1. Create `Form` class for validate input.
     2. Create Report class (extended from `ReportBaseGenerator`).
-        1. Implement function `get_params` for know the users params and the report params.
+        1. Overwrite function `get_params` for know the users params and the report params.
         2. Overwrite function `validate` calling `super` to validate the form.
         3. Implement function `generate` function using `self.buffer` for write the report.
-        4. Implement function `get_filename` to set report name.
+        4. Overwrite function `get_filename` to set report name.
         5. Overwrite function `get_message` to return the email body or raise `DoNotSend` to omit email send.
 2. Create report `Sender` on Admin page.
 3. Create `Report Generator` on Admin page.
