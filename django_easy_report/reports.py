@@ -3,7 +3,6 @@ import json
 import os
 from csv import DictWriter
 from gettext import gettext as _
-from io import BytesIO, StringIO
 
 from django.core.exceptions import ValidationError
 from django.forms.utils import ErrorDict
@@ -25,20 +24,23 @@ class ReportBaseGenerator(object):
 
     mimetype = 'application/octet-stream'
     form_class = None
+    binary = True
     using = None
 
     def __init__(self, **kwargs):
         self.setup_params = {}
         self.report_model = None
         self.form = None
-        self.buffer = BytesIO()
         self.reset()
 
     def reset(self):
+        """
+        Clean internal attributes
+        :return: None
+        """
         self.setup_params = {}
         self.report_model = None
         self.form = None
-        self.buffer = BytesIO()
 
     def setup(self, report_model, **kwargs):
         """
@@ -103,7 +105,12 @@ class ReportBaseGenerator(object):
         """
         return self.mimetype
 
-    def generate(self):  # pragma: no cover
+    def generate(self, buffer, tmp_dir):  # pragma: no cover
+        """
+        :param buffer: Buffer where write the report
+        :param tmp_dir: Path were temporal files could be created
+        :return: None
+        """
         raise NotImplementedError()
 
     def get_remote_path(self):
@@ -113,22 +120,21 @@ class ReportBaseGenerator(object):
         """
         path_parts = [
             self.report_model.report.name,
-            self.report_model.params_hash,
             self.report_model.created_at.strftime("%Y%m%d-%H%M"),
             self.report_model.filename
         ]
         return os.path.join(*path_parts)
 
-    def save(self):
+    def save(self, buffer):
         """
         Save buffer on remote storage
+        :param buffer: Buffer with the report
         :return: path saved on remote storage
         :rtype: str
         """
-        self.buffer.seek(0)
         filepath = self.get_remote_path()
         storage = self.report_model.report.sender.get_storage()
-        name = storage.save(filepath, self.buffer)
+        name = storage.save(filepath, buffer)
         return name
 
     def get_subject(self, requester):
@@ -189,6 +195,7 @@ class ReportBaseGenerator(object):
 
 
 class ReportModelGenerator(ReportBaseGenerator):
+    binary = False
     mimetype = 'text/csv'
 
     def __init__(self, model, fields,
@@ -209,10 +216,6 @@ class ReportModelGenerator(ReportBaseGenerator):
             self.form_class = import_class(form_class_name)
         self.email_field = email_field or ''
         self.user_fields = user_fields or []
-
-    def reset(self):
-        super(ReportModelGenerator, self).reset()
-        self.buffer = StringIO()
 
     def validate(self, data):
         errors = super(ReportModelGenerator, self).validate(data)
@@ -246,8 +249,8 @@ class ReportModelGenerator(ReportBaseGenerator):
             utc_now.strftime('%Y%m%d-%M%S')
         )
 
-    def generate(self):
-        reader = DictWriter(self.buffer, self.fields)
+    def generate(self, buffer, tmp_dir):
+        reader = DictWriter(buffer, self.fields)
         reader.writeheader()
         for item in self.get_queryset():
             row = self.get_row(item)
@@ -280,6 +283,9 @@ class ReportModelGenerator(ReportBaseGenerator):
 
 
 class AdminReportGenerator(ReportBaseGenerator):
+    binary = False
+    mimetype = 'text/csv'
+
     def __init__(self, **kwargs):
         super(AdminReportGenerator, self).__init__(**kwargs)
         self.fields = []
@@ -294,10 +300,6 @@ class AdminReportGenerator(ReportBaseGenerator):
         return "{}_{}.csv".format(
             self.admin_class.__name__, utc_now.strftime('%Y%m%d-%M%S')
         )
-
-    def reset(self):
-        super(AdminReportGenerator, self).reset()
-        self.buffer = StringIO()
 
     def validate(self, data):
         return {'__all__': ValidationError(_('This report is only valid for Admin page'))}
@@ -339,8 +341,8 @@ class AdminReportGenerator(ReportBaseGenerator):
                 row[field] = function(None, item)
         return row
 
-    def generate(self):
-        reader = DictWriter(self.buffer, self.fields)
+    def generate(self, buffer, tmp_dir):
+        reader = DictWriter(buffer, self.fields)
         reader.writeheader()
         for item in self.get_queryset():
             row = self.get_row(item)

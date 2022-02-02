@@ -1,4 +1,6 @@
 import logging
+import os.path
+from tempfile import TemporaryDirectory
 
 from celery import shared_task
 from django.core.mail import EmailMessage
@@ -19,12 +21,20 @@ def generate_report(query_pk):
     query.save(update_fields=['status', 'updated_at'])
     try:
         report = query.get_report()
-        query.filename = report.get_filename()
-        query.mimetype = report.get_mimetype()
-        report.generate()
-        query.storage_path_location = report.save()
+        with TemporaryDirectory() as tmp_dirname:
+            filename = report.get_filename()
+            query.filename = filename
+            query.mimetype = report.get_mimetype()
+            tmp_path = os.path.join(tmp_dirname, filename)
+            mode = 'wb' if report.binary else 'w'
+            with open(tmp_path, mode=mode) as buffer:
+                report.generate(buffer, tmp_dirname)
+            mode = 'rb' if report.binary else 'r'
+            with open(tmp_path, mode=mode) as buffer:
+                query.storage_path_location = report.save(buffer)
         query.status = STATUS_DONE
     except Exception:
+        logger.exception('Error generating report')
         query.status = STATUS_ERROR
         raise
     finally:
