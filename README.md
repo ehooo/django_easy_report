@@ -63,11 +63,11 @@ who have classes not listed on the proper setting.
 1. Create your code ([see example](./django_easy_report/tests/test_example.py)).
     1. Create `Form` class for validate input.
     2. Create Report class (extended from `ReportBaseGenerator`).
-        1. Overwrite function `get_params` for know the users params and the report params.
-        2. Overwrite function `validate` calling `super` to validate the form.
-        3. Implement function `generate` function using `self.buffer` for write the report.
-        4. Overwrite function `get_filename` to set report name.
-        5. Overwrite function `get_message` to return the email body or raise `DoNotSend` to omit email send.
+        1. (optional) Overwrite function `get_params` for know the users params and the report params.
+        2. (optional) Overwrite function `validate` calling `super` to validate the form.
+        3. Implement function `generate` writing the report using the arg `buffer` (also could use folder `tmp_dir` to save temporal files).
+        4. (optional) Overwrite function `get_filename` to set report name.
+        5. (optional) Overwrite function `get_message` to return the email body or raise `DoNotSend` to omit email send.
 2. Create report `Sender` on Admin page.
 3. Create `Report Generator` on Admin page.
 4. Use you report endpoint defined on Admin page.
